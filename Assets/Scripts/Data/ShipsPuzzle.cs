@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -14,6 +15,9 @@ public class ShipsPuzzle : MonoBehaviour
     private Dictionary<int, ShipView> _shipsById;
     private Dictionary<int, List<LevelDataSO.CellData>> _grids;
     private Dictionary<Color, List<ShipData>> _dataByColor;
+    private List<ShipData> _dataColor;
+    private List<Color> _colors;
+    private int _index = 0;
 
     private void Start()
     {
@@ -53,25 +57,25 @@ public class ShipsPuzzle : MonoBehaviour
            _dataByColor.Add(color, data);
         }
 
+        _colors = new( _dataByColor.Keys);
+    }
 
-        foreach (var datas in _dataByColor)
+
+    public void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            foreach (var data in datas.Value)
+            if (_index >= _colors.Count)
+                return;
+            
+            for (var i = 0; i < _dataByColor[_colors[_index]].Count; i++)
             {
-                bool placed = false;
-                int maxAttempts = 50; 
-
-                while (placed == false && maxAttempts > 0)
-                {
-                    placed = _parkingGrid.TryPlaceShip(data, _shipsById[data.Size]);
-                    maxAttempts--;
-                }
-
-                if (placed == false)
-                {
+                var data = _dataByColor[_colors[_index]][i];
+                if (_parkingGrid.TryPlaceShip(data, _shipsById[data.Size]) == false)
                     Debug.LogWarning($"Не удалось разместить корабль размером {data.Size} на сетке!");
-                }
             }
+
+            _index++;
         }
     }
 }
