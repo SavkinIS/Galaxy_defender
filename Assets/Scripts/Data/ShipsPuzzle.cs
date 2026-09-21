@@ -3,10 +3,6 @@ using UnityEngine;
 
 public class ShipsPuzzle : MonoBehaviour
 {
-    private const int SmallShipSize = 1;
-    private const int MediumShipSize = 2;
-    private const int LargeShipSize = 3;
-
     [SerializeField] private ShipView _shipViewS1;
     [SerializeField] private ShipView _shipViewS2;
     [SerializeField] private ShipView _shipViewS3;
@@ -23,12 +19,13 @@ public class ShipsPuzzle : MonoBehaviour
     private void Start()
     {
         ParkingLog.Enabled = _debugLogs;
+        _parkingCreator.Configure(_generationSettings);
 
         _shipsById = new Dictionary<int, ShipView>
         {
-            { SmallShipSize, _shipViewS1 },
-            { MediumShipSize, _shipViewS2 },
-            { LargeShipSize, _shipViewS3 },
+            { _parkingCreator.SmallShipSize, _shipViewS1 },
+            { _parkingCreator.MediumShipSize, _shipViewS2 },
+            { _parkingCreator.LargeShipSize, _shipViewS3 },
         };
 
         var solver = new GuaranteedLaunchTapeSolver(

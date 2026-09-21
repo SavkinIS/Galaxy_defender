@@ -3,21 +3,23 @@ using UnityEngine;
 
 public class ShipParkingCreator : MonoBehaviour
 {
-    private const int DefaultSmallShipSize = 1;
-    private const int DefaultMediumShipSize = 2;
-    private const int DefaultLargeShipSize = 3;
-    private const int SmallShipAmmo = 10;
-    private const int MediumShipAmmo = 20;
-    private const int LargeShipAmmo = 30;
-
-    [SerializeField] private int _shipSize1 = DefaultSmallShipSize;
-    [SerializeField] private int _shipSize2 = DefaultMediumShipSize;
-    [SerializeField] private int _shipSize3 = DefaultLargeShipSize;
-
+    private PuzzleGenerationSettingsSO _generationSettings;
+    private PuzzleGenerationSettingsSO _runtimeSettings;
     private Dictionary<int, int> _bulletsBySize;
+
+    public int SmallShipSize => GetSettings().SmallShipSize;
+    public int MediumShipSize => GetSettings().MediumShipSize;
+    public int LargeShipSize => GetSettings().LargeShipSize;
 
     private void Awake()
     {
+        EnsureAmmoTable();
+    }
+
+    public void Configure(PuzzleGenerationSettingsSO settings)
+    {
+        _generationSettings = settings;
+        _bulletsBySize = null;
         EnsureAmmoTable();
     }
 
@@ -31,7 +33,7 @@ public class ShipParkingCreator : MonoBehaviour
         out int ammo)
     {
         EnsureAmmoTable();
-        size = _shipSize1;
+        size = SmallShipSize;
         ammo = 0;
 
         if (remainingOfColor <= 0 || exposedOfColor <= 0)
@@ -69,12 +71,12 @@ public class ShipParkingCreator : MonoBehaviour
         switch (difficulty)
         {
             case PuzzleDifficulty.Medium:
-                return new List<int> { _shipSize2, _shipSize3, _shipSize1 };
+                return new List<int> { MediumShipSize, LargeShipSize, SmallShipSize };
             case PuzzleDifficulty.Hard:
             case PuzzleDifficulty.Hardcore:
-                return new List<int> { _shipSize1, _shipSize2, _shipSize3 };
+                return new List<int> { SmallShipSize, MediumShipSize, LargeShipSize };
             default:
-                return new List<int> { _shipSize3, _shipSize2, _shipSize1 };
+                return new List<int> { LargeShipSize, MediumShipSize, SmallShipSize };
         }
     }
 
@@ -130,7 +132,18 @@ public class ShipParkingCreator : MonoBehaviour
                 return size.Key;
         }
 
-        return _shipSize3;
+        return LargeShipSize;
+    }
+
+    private PuzzleGenerationSettingsSO GetSettings()
+    {
+        if (_generationSettings != null)
+            return _generationSettings;
+
+        if (_runtimeSettings == null)
+            _runtimeSettings = PuzzleGenerationSettingsSO.CreateRuntimeDefault();
+
+        return _runtimeSettings;
     }
 
     private void EnsureAmmoTable()
@@ -138,11 +151,12 @@ public class ShipParkingCreator : MonoBehaviour
         if (_bulletsBySize != null)
             return;
 
+        PuzzleGenerationSettingsSO settings = GetSettings();
         _bulletsBySize = new Dictionary<int, int>
         {
-            { _shipSize1, SmallShipAmmo },
-            { _shipSize2, MediumShipAmmo },
-            { _shipSize3, LargeShipAmmo },
+            { settings.SmallShipSize, settings.SmallShipAmmo },
+            { settings.MediumShipSize, settings.MediumShipAmmo },
+            { settings.LargeShipSize, settings.LargeShipAmmo },
         };
     }
 }
