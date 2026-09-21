@@ -3,10 +3,17 @@ using UnityEngine;
 
 public class ShipParkingCreator : MonoBehaviour
 {
-    [SerializeField] private int _shipSize1 = 1;
-    [SerializeField] private int _shipSize2 = 2;
-    [SerializeField] private int _shipSize3 = 3;
-    
+    private const int DefaultSmallShipSize = 1;
+    private const int DefaultMediumShipSize = 2;
+    private const int DefaultLargeShipSize = 3;
+    private const int SmallShipAmmo = 10;
+    private const int MediumShipAmmo = 20;
+    private const int LargeShipAmmo = 30;
+
+    [SerializeField] private int _shipSize1 = DefaultSmallShipSize;
+    [SerializeField] private int _shipSize2 = DefaultMediumShipSize;
+    [SerializeField] private int _shipSize3 = DefaultLargeShipSize;
+
     private Dictionary<int, int> _bulletsBySize;
 
     private void Awake()
@@ -14,25 +21,12 @@ public class ShipParkingCreator : MonoBehaviour
         EnsureAmmoTable();
     }
 
-    private void EnsureAmmoTable()
-    {
-        if (_bulletsBySize != null)
-            return;
-
-        _bulletsBySize = new Dictionary<int, int>
-        {
-            { _shipSize1, 10 },
-            { _shipSize2, 20 },
-            { _shipSize3, 30 },
-        };
-    }
-
     public bool TryPickShip(
         int remainingOfColor,
         int exposedOfColor,
         int waitingCount,
         int waitSlots,
-        int difficulty,
+        PuzzleDifficulty difficulty,
         out int size,
         out int ammo)
     {
@@ -49,7 +43,7 @@ public class ShipParkingCreator : MonoBehaviour
         for (int i = 0; i < sizes.Count; i++)
         {
             int candidateSize = sizes[i];
-            int candidateAmmo = Mathf.Min(_bulletsBySize[candidateSize], remainingOfColor);
+            int candidateAmmo = Mathf.Min(GetAmmoForSize(candidateSize), remainingOfColor);
             if (candidateAmmo <= 0)
                 continue;
 
@@ -70,14 +64,14 @@ public class ShipParkingCreator : MonoBehaviour
         return true;
     }
 
-    public List<int> GetSizePriority(int difficulty)
+    public List<int> GetSizePriority(PuzzleDifficulty difficulty)
     {
         switch (difficulty)
         {
-            case 3:
+            case PuzzleDifficulty.Medium:
                 return new List<int> { _shipSize2, _shipSize3, _shipSize1 };
-            case 4:
-            case 5:
+            case PuzzleDifficulty.Hard:
+            case PuzzleDifficulty.Hardcore:
                 return new List<int> { _shipSize1, _shipSize2, _shipSize3 };
             default:
                 return new List<int> { _shipSize3, _shipSize2, _shipSize1 };
@@ -90,71 +84,42 @@ public class ShipParkingCreator : MonoBehaviour
         return _bulletsBySize.TryGetValue(size, out int ammo) ? ammo : 0;
     }
 
-    public List<ShipData> GenerateShipsForColor(int blocksCount, int difficulty, Color color, int colorIndex)
+    public List<ShipData> GenerateShipsForColor(int blocksCount, PuzzleDifficulty difficulty, Color color, int colorIndex)
     {
         EnsureAmmoTable();
-        Queue<int> sizes = new Queue<int>();
 
-        switch (difficulty)
+        List<int> sizePriority = GetSizePriority(difficulty);
+        var ships = new List<ShipData>();
+        int remainingBlocks = blocksCount;
+
+        while (remainingBlocks > 0)
         {
-            case 1:
-            case 2:
-                sizes.Enqueue(_shipSize3);
-                sizes.Enqueue(_shipSize2);
-                sizes.Enqueue(_shipSize1);
+            int size = FindPreferredFittingSize(sizePriority, remainingBlocks);
+            int capacity = GetAmmoForSize(size);
+            if (capacity <= 0)
                 break;
-            case 3:
-                sizes.Enqueue(_shipSize2);
-                sizes.Enqueue(_shipSize3);
-                sizes.Enqueue(_shipSize1);
-                break;
-            case 4:
-            case 5:
-                sizes.Enqueue(_shipSize1);
-                sizes.Enqueue(_shipSize2);
-                sizes.Enqueue(_shipSize3);
-                break;
-            default:
-                sizes.Enqueue(_shipSize3);
-                sizes.Enqueue(_shipSize2);
-                sizes.Enqueue(_shipSize1);
-                break;
+
+            int ammo = Mathf.Min(capacity, remainingBlocks);
+            if (ammo < capacity)
+                size = FindShipSize(ammo);
+
+            ships.Add(new ShipData(size, ammo, ammo, color, colorIndex));
+            remainingBlocks -= ammo;
         }
-        
-        int currentBlocks = blocksCount;
-        
-        List<ShipData> datas = new List<ShipData>();
 
-        int currentSize = sizes.Dequeue();
+        return ships;
+    }
 
-        while (currentBlocks > 0)
-        {  
-            int bullets = _bulletsBySize[currentSize];
-            int size = currentSize;
-
-            if (currentBlocks >= bullets)
-            {
-                currentBlocks -= bullets;
-                
-                if (currentBlocks < bullets)
-                {
-                    if (sizes.Count > 0)
-                        currentSize = sizes.Dequeue();
-                }
-            }
-            else
-            {
-                bullets = currentBlocks;
-                currentBlocks -= bullets;
-
-                size = FindShipSize(bullets);
-            }
-            
-            ShipData data = new  ShipData(size, bullets, bullets, color, colorIndex);
-            datas.Add(data);
+    private int FindPreferredFittingSize(List<int> sizePriority, int remainingBlocks)
+    {
+        for (int i = 0; i < sizePriority.Count; i++)
+        {
+            int size = sizePriority[i];
+            if (GetAmmoForSize(size) <= remainingBlocks)
+                return size;
         }
-        
-        return datas;
+
+        return sizePriority[sizePriority.Count - 1];
     }
 
     private int FindShipSize(int bullets)
@@ -162,9 +127,22 @@ public class ShipParkingCreator : MonoBehaviour
         foreach (var size in _bulletsBySize)
         {
             if (size.Value >= bullets)
-                return size.Key; 
+                return size.Key;
         }
-    
+
         return _shipSize3;
+    }
+
+    private void EnsureAmmoTable()
+    {
+        if (_bulletsBySize != null)
+            return;
+
+        _bulletsBySize = new Dictionary<int, int>
+        {
+            { _shipSize1, SmallShipAmmo },
+            { _shipSize2, MediumShipAmmo },
+            { _shipSize3, LargeShipAmmo },
+        };
     }
 }

@@ -3,34 +3,42 @@ using UnityEngine;
 
 public sealed class GuaranteedLaunchTapeSolver
 {
+    private const int SingleLayerCount = 1;
+    private const int MinColorAttempts = 1;
+    private const int NoRemainingBlocks = 0;
+
     private readonly ShipParkingCreator _parkingCreator;
     private readonly ParkingGrid _parkingGrid;
-    private readonly int _difficulty;
+    private readonly PuzzleGenerationSettingsSO _settings;
+    private readonly PuzzleDifficulty _difficulty;
     private readonly int _waitSlots;
     private readonly HashSet<string> _failedStates = new HashSet<string>();
     private int _visitedStates;
 
+    public PuzzleDifficulty Difficulty => _difficulty;
     public int WaitSlots => _waitSlots;
 
     public GuaranteedLaunchTapeSolver(
         ShipParkingCreator parkingCreator,
         ParkingGrid parkingGrid,
-        int baseWaitSlots,
-        int difficulty)
+        PuzzleGenerationSettingsSO settings)
     {
         _parkingCreator = parkingCreator;
         _parkingGrid = parkingGrid;
-        _difficulty = Mathf.Clamp(difficulty, 1, 5);
-        _waitSlots = ResolveWaitSlots(baseWaitSlots, _difficulty);
+        _settings = settings != null
+            ? settings
+            : PuzzleGenerationSettingsSO.CreateRuntimeDefault();
+        _difficulty = _settings.Difficulty;
+        _waitSlots = _settings.ResolvedWaitingSlots;
     }
 
     public List<ShipData> Build(LevelDataSO level)
     {
         EnemyBoard board = EnemyBoard.FromLevel(level);
-        if (board.RemainingTotal == 0)
+        if (board.RemainingTotal == NoRemainingBlocks)
             return new List<ShipData>();
 
-        if (board.Layers == 1)
+        if (board.Layers == SingleLayerCount)
             return BuildSingleLayer(level, board);
 
         _failedStates.Clear();
@@ -56,7 +64,9 @@ public sealed class GuaranteedLaunchTapeSolver
         List<int> colors = OrderColors(board.GetExposedColors(), board);
         List<int> sizes = _parkingCreator.GetSizePriority(_difficulty);
 
-        for (int shift = 0; shift < Mathf.Max(1, colors.Count); shift++)
+        int attemptCount = Mathf.Max(MinColorAttempts, colors.Count);
+        
+        for (int shift = 0; shift < attemptCount; shift++)
         {
             var orderedColors = new List<int>(colors.Count);
             for (int i = 0; i < colors.Count; i++)
@@ -95,7 +105,7 @@ public sealed class GuaranteedLaunchTapeSolver
                 for (int i = 0; i < tape.Count; i++)
                     tape[i].ResetAmmo();
 
-                ParkingLog.Info($"Однослойная лента готова: кораблей={tape.Count}, слотов={_waitSlots}, попытка={shift + 1}");
+                ParkingLog.Info($"Однослойная лента готова: кораблей={tape.Count}, слотов={_waitSlots}, попытка={shift + MinColorAttempts}");
                 return tape;
             }
         }
@@ -187,7 +197,7 @@ public sealed class GuaranteedLaunchTapeSolver
         {
             int leftCount = board.ExposedCount(left);
             int rightCount = board.ExposedCount(right);
-            int comparison = _difficulty <= 2
+            int comparison = IsLowDifficulty(_difficulty)
                 ? rightCount.CompareTo(leftCount)
                 : leftCount.CompareTo(rightCount);
             return comparison != 0 ? comparison : left.CompareTo(right);
@@ -196,10 +206,9 @@ public sealed class GuaranteedLaunchTapeSolver
         return colors;
     }
 
-    private static int ResolveWaitSlots(int baseSlots, int difficulty)
+    private static bool IsLowDifficulty(PuzzleDifficulty difficulty)
     {
-        int bonus = difficulty <= 1 ? 2 : difficulty == 2 ? 1 : difficulty >= 4 ? -1 : 0;
-        return Mathf.Max(1, baseSlots + bonus);
+        return difficulty == PuzzleDifficulty.Training || difficulty == PuzzleDifficulty.Easy;
     }
 
     private static void Fire(ShipData ship, EnemyBoard board)

@@ -5,14 +5,20 @@ using Utilites;
 public class LaunchTapeGenerator
 {
     private readonly ShipParkingCreator _parkingCreator;
+    private readonly PuzzleGenerationSettingsSO _settings;
     private readonly int _waitSlots;
-    private readonly int _difficulty;
+    private readonly PuzzleDifficulty _difficulty;
 
-    public LaunchTapeGenerator(ShipParkingCreator parkingCreator, int waitSlots, int difficulty)
+    public LaunchTapeGenerator(
+        ShipParkingCreator parkingCreator,
+        PuzzleGenerationSettingsSO settings)
     {
         _parkingCreator = parkingCreator;
-        _waitSlots = Mathf.Max(1, waitSlots);
-        _difficulty = difficulty;
+        _settings = settings != null
+            ? settings
+            : PuzzleGenerationSettingsSO.CreateRuntimeDefault();
+        _waitSlots = _settings.ResolvedWaitingSlots;
+        _difficulty = _settings.Difficulty;
     }
 
     public List<ShipData> Build(LevelDataSO level)

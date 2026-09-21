@@ -3,14 +3,17 @@ using UnityEngine;
 
 public class ShipsPuzzle : MonoBehaviour
 {
+    private const int SmallShipSize = 1;
+    private const int MediumShipSize = 2;
+    private const int LargeShipSize = 3;
+
     [SerializeField] private ShipView _shipViewS1;
     [SerializeField] private ShipView _shipViewS2;
     [SerializeField] private ShipView _shipViewS3;
     [SerializeField] private ShipParkingCreator _parkingCreator;
     [SerializeField] private ParkingGrid _parkingGrid;
     [SerializeField] private LevelDataSO _levelData;
-    [SerializeField] private int _difficulty = 2;
-    [SerializeField] private int _waitSlots = 5;
+    [SerializeField] private PuzzleGenerationSettingsSO _generationSettings;
     [SerializeField] private bool _debugLogs = true;
 
     private Dictionary<int, ShipView> _shipsById;
@@ -23,16 +26,15 @@ public class ShipsPuzzle : MonoBehaviour
 
         _shipsById = new Dictionary<int, ShipView>
         {
-            { 1, _shipViewS1 },
-            { 2, _shipViewS2 },
-            { 3, _shipViewS3 },
+            { SmallShipSize, _shipViewS1 },
+            { MediumShipSize, _shipViewS2 },
+            { LargeShipSize, _shipViewS3 },
         };
 
         var solver = new GuaranteedLaunchTapeSolver(
             _parkingCreator,
             _parkingGrid,
-            _waitSlots,
-            _difficulty);
+            _generationSettings);
         _launchTape = solver.Build(_levelData);
 
         if (_launchTape == null || _launchTape.Count == 0)

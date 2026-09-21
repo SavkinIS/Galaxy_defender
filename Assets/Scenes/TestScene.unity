@@ -469,8 +469,7 @@ MonoBehaviour:
   _parkingCreator: {fileID: 1931428570}
   _parkingGrid: {fileID: 4492555554599267040}
   _levelData: {fileID: 11400000, guid: 9206377f8387e4a2ba26592d267e70e9, type: 2}
-  _difficulty: 2
-  _waitSlots: 5
+  _generationSettings: {fileID: 11400000, guid: 9c05f2db7dee4473cb36b1f53a75e32e, type: 2}
   _debugLogs: 1
 --- !u!4 &1931428569
 Transform:
