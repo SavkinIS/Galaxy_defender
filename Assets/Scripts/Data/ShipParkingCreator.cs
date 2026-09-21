@@ -13,7 +13,15 @@ public class ShipParkingCreator : MonoBehaviour
 
     private void Awake()
     {
-        _bulletsBySize = new Dictionary<int, int>()
+        EnsureAmmoTable();
+    }
+
+    private void EnsureAmmoTable()
+    {
+        if (_bulletsBySize != null)
+            return;
+
+        _bulletsBySize = new Dictionary<int, int>
         {
             { _shipSize1, 10 },
             { _shipSize2, 20 },
@@ -21,8 +29,66 @@ public class ShipParkingCreator : MonoBehaviour
         };
     }
 
+    public bool TryPickShip(
+        int remainingOfColor,
+        int exposedOfColor,
+        int waitingCount,
+        int waitSlots,
+        int difficulty,
+        out int size,
+        out int ammo)
+    {
+        EnsureAmmoTable();
+        size = _shipSize1;
+        ammo = 0;
+
+        if (remainingOfColor <= 0 || exposedOfColor <= 0)
+            return false;
+
+        List<int> sizes = GetSizePriority(difficulty);
+        bool waitFull = waitingCount >= waitSlots;
+
+        for (int i = 0; i < sizes.Count; i++)
+        {
+            int candidateSize = sizes[i];
+            int candidateAmmo = Mathf.Min(_bulletsBySize[candidateSize], remainingOfColor);
+            if (candidateAmmo <= 0)
+                continue;
+
+            bool willWait = candidateAmmo > exposedOfColor;
+            if (willWait && waitFull)
+                continue;
+
+            size = FindShipSize(candidateAmmo);
+            ammo = candidateAmmo;
+            return true;
+        }
+
+        ammo = Mathf.Min(exposedOfColor, remainingOfColor);
+        if (ammo <= 0)
+            return false;
+
+        size = FindShipSize(ammo);
+        return true;
+    }
+
+    public List<int> GetSizePriority(int difficulty)
+    {
+        switch (difficulty)
+        {
+            case 3:
+                return new List<int> { _shipSize2, _shipSize3, _shipSize1 };
+            case 4:
+            case 5:
+                return new List<int> { _shipSize1, _shipSize2, _shipSize3 };
+            default:
+                return new List<int> { _shipSize3, _shipSize2, _shipSize1 };
+        }
+    }
+
     public List<ShipData> GenerateShipsForColor(int blocksCount, int difficulty, Color color, int colorIndex)
     {
+        EnsureAmmoTable();
         Queue<int> sizes = new Queue<int>();
 
         switch (difficulty)

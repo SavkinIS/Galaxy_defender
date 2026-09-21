@@ -12,4 +12,9 @@ public class ParkingCell : MonoBehaviour
         _x = x;
         _y = y;
     }
+
+    public void SetOccupied(bool occupied)
+    {
+        gameObject.SetActive(occupied == false);
+    }
 }

@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class ShipsPuzzle : MonoBehaviour
@@ -11,71 +9,67 @@ public class ShipsPuzzle : MonoBehaviour
     [SerializeField] private ShipParkingCreator _parkingCreator;
     [SerializeField] private ParkingGrid _parkingGrid;
     [SerializeField] private LevelDataSO _levelData;
-    
+    [SerializeField] private int _difficulty = 2;
+    [SerializeField] private int _waitSlots = 5;
+    [SerializeField] private bool _debugLogs = true;
+
     private Dictionary<int, ShipView> _shipsById;
-    private Dictionary<int, List<LevelDataSO.CellData>> _grids;
-    private Dictionary<Color, List<ShipData>> _dataByColor;
-    private List<ShipData> _dataColor;
-    private List<Color> _colors;
-    private int _index = 0;
+    private List<ShipData> _launchTape;
+    private int _nextIndex;
 
     private void Start()
     {
-        _shipsById = new Dictionary<int, ShipView>()
+        ParkingLog.Enabled = _debugLogs;
+
+        _shipsById = new Dictionary<int, ShipView>
         {
             { 1, _shipViewS1 },
             { 2, _shipViewS2 },
             { 3, _shipViewS3 },
         };
 
-        _grids = new (_levelData.ColorMappings.Length);
-        _dataByColor = new();
-        
-        foreach (var cell in _levelData.Grid)
+        var generator = new LaunchTapeGenerator(_parkingCreator, _waitSlots, _difficulty);
+        _launchTape = generator.Build(_levelData);
+
+        if (_launchTape == null || _launchTape.Count == 0)
         {
-            if (cell.HasColor)
-            {
-                if (_grids.ContainsKey(cell.ColorIndex))
-                {
-                    _grids[cell.ColorIndex].Add(cell);
-                }
-                else
-                {
-                    _grids[cell.ColorIndex] = new List<LevelDataSO.CellData>();
-                    _grids[cell.ColorIndex].Add(cell);
-                }
-            }
+            ParkingLog.Warn("Лента штурмовиков пустая.");
+            _nextIndex = -1;
+            return;
         }
 
-        _grids.Remove(LevelDataSO.CellData.Empty);
+        _parkingGrid.ClearOccupancy();
+        _nextIndex = _launchTape.Count - 1;
+        ParkingLog.Info($"Клик ЛКМ — один корабль. Всего {_launchTape.Count}.");
 
-        foreach (var grid in _grids)
+        while (_launchTape.Count > 0 && _nextIndex >= 0)
         {
-           var colrIndex = grid.Key;
-           Color color = _levelData.GetColor(colrIndex);
-           var data = _parkingCreator.GenerateShipsForColor(grid.Value.Count, 2, color, colrIndex);
-           _dataByColor.Add(color, data);
+            PlaceNextShip();
         }
-
-        _colors = new( _dataByColor.Keys);
     }
 
-
-    public void Update()
+    private void PlaceNextShip()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (_launchTape == null || _nextIndex < 0)
         {
-            if (_index >= _colors.Count)
-                return;
-            
-            for (var i = 0; i < _dataByColor[_colors[_index]].Count; i++)
-            {
-                var data = _dataByColor[_colors[_index]][i];
-                if (_parkingGrid.TryPlaceShip(data, _shipsById[data.Size]) == false)
-                    Debug.LogWarning($"Не удалось разместить корабль размером {data.Size} на сетке!");
-            }
-
-            _index++;
+            ParkingLog.Warn("Больше кораблей нет.");
+            return;
         }
+
+        ShipData data = _launchTape[_nextIndex];
+        if (_shipsById.TryGetValue(data.Size, out ShipView prefab) == false || prefab == null)
+        {
+            ParkingLog.Error($"Нет префаба для size={data.Size}");
+            _nextIndex--;
+            return;
+        }
+
+        ParkingLog.Info($"Клик: кладу S{_nextIndex + 1}/{_launchTape.Count} size={data.Size} цвет={data.ColorIndex}");
+
+        if (_parkingGrid.TryPlaceOne(data, prefab, _nextIndex) == false)
+            ParkingLog.Error($"Не удалось поставить S{_nextIndex + 1}");
+
+        _nextIndex--;
+        ParkingLog.Info(_nextIndex >= 0 ? $"Осталось кликов: {_nextIndex + 1}" : "Лента закончилась.");
     }
 }

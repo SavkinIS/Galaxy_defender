@@ -24,10 +24,22 @@ public class ShipData
     
     public void DecreaseBullets()
     {
-        if (CurrentBullets > 0)
-            CurrentBullets--;
-        
+        Spend(1);
+    }
+
+    public void Spend(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        CurrentBullets = Mathf.Max(0, CurrentBullets - amount);
+
         if (IsAlive == false)
             Cleared?.Invoke();
+    }
+
+    public void ResetAmmo()
+    {
+        CurrentBullets = MaxBullets;
     }
 }

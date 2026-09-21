@@ -87,6 +87,434 @@ public class ParkingGrid : MonoBehaviour
         _hasOccupiedCells = true;
     }
 
+    public bool TryPlaceOne(ShipData data, ShipView prefab, int tapeIndex)
+    {
+        EnsureInitialized();
+        return TryPlaceOnRim(data, prefab, tapeIndex);
+    }
+
+    public bool TryPlaceTapeReverse(IReadOnlyList<ShipData> tape, System.Func<int, ShipView> prefabBySize)
+    {
+        EnsureInitialized();
+        ClearOccupancy();
+
+        ParkingLog.Info($"Укладка с конца: кораблей={tape.Count}, сетка={_sizeX}x{_sizeY}, шаг={GetGridAxisX().magnitude:0.00}");
+
+        for (int i = tape.Count - 1; i >= 0; i--)
+        {
+            ShipData data = tape[i];
+            ShipView prefab = prefabBySize(data.Size);
+
+            ParkingLog.Info($"Кладу S{i + 1}/{tape.Count} size={data.Size} цвет={data.ColorIndex} ammo={data.MaxBullets}");
+
+            if (prefab == null || TryPlaceOnRim(data, prefab, i) == false)
+            {
+                ParkingLog.Error($"Не удалось уложить S{i + 1} size={data.Size}");
+                ParkingLog.Info(BuildOccupancyMap());
+                return false;
+            }
+        }
+
+        ParkingLog.Info("Итоговая стоянка:\n" + BuildOccupancyMap());
+        LogVisualOverlaps();
+        return true;
+    }
+
+    public void ClearOccupancy()
+    {
+        EnsureInitialized();
+
+        for (int x = 0; x < _sizeX; x++)
+        {
+            for (int y = 0; y < _sizeY; y++)
+                _cells[x, y] = true;
+        }
+
+        _hasOccupiedCells = false;
+
+        if (_cellsViewMap == null)
+            return;
+
+        foreach (var pair in _cellsViewMap)
+            pair.Value.SetOccupied(false);
+    }
+
+    private void DisableOccupiedCells(int frontX, int frontY, int dx, int dy, int size)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            int x = frontX - dx * i;
+            int y = frontY - dy * i;
+
+            if (_cellsViewMap != null && _cellsViewMap.TryGetValue((x, y), out ParkingCell cell))
+                cell.SetOccupied(true);
+        }
+    }
+
+    public bool TryWorldToCell(Vector3 world, out int x, out int y)
+    {
+        x = -1;
+        y = -1;
+
+        if (_cellsViewMap == null || _cellsViewMap.Count == 0)
+            return false;
+
+        float best = float.MaxValue;
+        foreach (var pair in _cellsViewMap)
+        {
+            float dist = (pair.Value.transform.position - world).sqrMagnitude;
+            if (dist >= best)
+                continue;
+
+            best = dist;
+            x = pair.Key.x;
+            y = pair.Key.y;
+        }
+
+        return x >= 0;
+    }
+
+    private bool TryPlaceOnRim(ShipData shipData, ShipView shipPrefab, int tapeIndex)
+    {
+        int size = Mathf.Max(1, shipData.Size);
+
+        bool withExit = TryFindRimPlacement(size, true, true, out RimPlacement placement);
+        ParkingLog.Info($"  кандидаты с выездом и склейкой: {(withExit ? $"score={placement.Score} glue={placement.Glue} nose=({placement.FrontX},{placement.FrontY}) dir=({placement.Dx},{placement.Dy})" : "нет")}");
+
+        if (withExit == false)
+        {
+            bool glued = TryFindRimPlacement(size, false, true, out placement);
+            ParkingLog.Warn($"  без чистого выезда: {(glued ? $"score={placement.Score} glue={placement.Glue} nose=({placement.FrontX},{placement.FrontY})" : "нет")}");
+            withExit = glued;
+        }
+
+        if (withExit == false)
+        {
+            bool any = TryFindRimPlacement(size, false, false, out placement);
+            ParkingLog.Warn($"  без склейки (дыра): {(any ? $"score={placement.Score} nose=({placement.FrontX},{placement.FrontY})" : "нет")}");
+            if (any == false)
+                return false;
+        }
+
+        OccupyFromNose(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
+        DisableOccupiedCells(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
+
+        ShipView ship = SpawnShipView(shipData, shipPrefab, placement.FrontX, placement.FrontY, (placement.Dx, placement.Dy));
+        TryWorldToCell(ship.transform.position, out int shipCellX, out int shipCellY);
+
+        ParkingLog.Info(
+            $"  клетки корабля: {FormatShipCells(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size)}");
+        ParkingLog.Info(
+            $"  нос клетки=({placement.FrontX},{placement.FrontY}) dir=({placement.Dx},{placement.Dy}) size={size}");
+        ParkingLog.Info(
+            $"  позиция корабля world={ship.transform.position} в клетках=({shipCellX},{shipCellY})");
+        ParkingLog.Info("  карта:\n" + BuildOccupancyMap(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size));
+        return true;
+    }
+
+    private bool TryFindRimPlacement(int size, bool requireClearExit, bool requireGlue, out RimPlacement result)
+    {
+        result = default;
+        var found = new List<RimPlacement>();
+        GetOccupiedCentroid(out float cx, out float cy, out int occupiedCount);
+
+        for (int d = 0; d < _directions.Length; d++)
+        {
+            int dx = _directions[d].x;
+            int dy = _directions[d].y;
+
+            for (int fx = 0; fx < _sizeX; fx++)
+            {
+                for (int fy = 0; fy < _sizeY; fy++)
+                {
+                    if (CanOccupyFromNose(fx, fy, dx, dy, size) == false)
+                        continue;
+
+                    if (requireClearExit && HasClearExit(fx, fy, dx, dy) == false)
+                        continue;
+
+                    int glue = CountGlue(fx, fy, dx, dy, size);
+                    if (requireGlue && occupiedCount > 0 && glue == 0)
+                        continue;
+
+                    int emptyInBox = CountEmptyInBoundingBoxAfter(fx, fy, dx, dy, size);
+                    int boxArea = BoundingBoxAreaAfter(fx, fy, dx, dy, size);
+                    float outward = (fx - cx) * dx + (fy - cy) * dy;
+                    int score = glue * 80 - emptyInBox * 35 - boxArea * 2 + Mathf.RoundToInt(outward * 4f);
+
+                    if (occupiedCount == 0)
+                    {
+                        float dist = Mathf.Abs(fx - cx) + Mathf.Abs(fy - cy);
+                        score = 1000 - Mathf.RoundToInt(dist * 20f) + Mathf.RoundToInt(outward * 4f);
+                    }
+
+                    found.Add(new RimPlacement(fx, fy, dx, dy, score, glue));
+                }
+            }
+        }
+
+        ParkingLog.Info($"  найдено вариантов (exit={requireClearExit}, glue={requireGlue}): {found.Count}");
+
+        if (found.Count == 0)
+            return false;
+
+        found.Sort((a, b) =>
+        {
+            int byScore = b.Score.CompareTo(a.Score);
+            if (byScore != 0)
+                return byScore;
+            return b.Glue.CompareTo(a.Glue);
+        });
+
+        result = found[0];
+        return true;
+    }
+
+    private bool CanOccupyFromNose(int frontX, int frontY, int dx, int dy, int size)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            int x = frontX - dx * i;
+            int y = frontY - dy * i;
+            if (IsCellFree(x, y) == false)
+                return false;
+        }
+
+        return true;
+    }
+
+    private void OccupyFromNose(int frontX, int frontY, int dx, int dy, int size)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            int x = frontX - dx * i;
+            int y = frontY - dy * i;
+            _cells[x, y] = false;
+        }
+
+        _hasOccupiedCells = true;
+    }
+
+    private bool HasClearExit(int frontX, int frontY, int dx, int dy)
+    {
+        int x = frontX + dx;
+        int y = frontY + dy;
+
+        while (x >= 0 && x < _sizeX && y >= 0 && y < _sizeY)
+        {
+            if (IsCellFree(x, y) == false)
+                return false;
+
+            x += dx;
+            y += dy;
+        }
+
+        return true;
+    }
+
+    private int CountGlue(int frontX, int frontY, int dx, int dy, int size)
+    {
+        int glue = 0;
+
+        for (int i = 0; i < size; i++)
+        {
+            int x = frontX - dx * i;
+            int y = frontY - dy * i;
+
+            for (int d = 0; d < _directions.Length; d++)
+            {
+                int nx = x + _directions[d].x;
+                int ny = y + _directions[d].y;
+
+                if (nx < 0 || nx >= _sizeX || ny < 0 || ny >= _sizeY)
+                    continue;
+
+                if (_cells[nx, ny])
+                    continue;
+
+                if (IsOnShip(nx, ny, frontX, frontY, dx, dy, size))
+                    continue;
+
+                glue++;
+            }
+        }
+
+        return glue;
+    }
+
+    private static bool IsOnShip(int x, int y, int frontX, int frontY, int dx, int dy, int size)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            if (x == frontX - dx * i && y == frontY - dy * i)
+                return true;
+        }
+
+        return false;
+    }
+
+    private void GetOccupiedCentroid(out float cx, out float cy, out int count)
+    {
+        float sumX = 0f;
+        float sumY = 0f;
+        count = 0;
+
+        for (int x = 0; x < _sizeX; x++)
+        {
+            for (int y = 0; y < _sizeY; y++)
+            {
+                if (_cells[x, y])
+                    continue;
+
+                sumX += x;
+                sumY += y;
+                count++;
+            }
+        }
+
+        if (count == 0)
+        {
+            cx = (_sizeX - 1) * 0.5f;
+            cy = (_sizeY - 1) * 0.5f;
+            return;
+        }
+
+        cx = sumX / count;
+        cy = sumY / count;
+    }
+
+    private int BoundingBoxAreaAfter(int frontX, int frontY, int dx, int dy, int size)
+    {
+        GetBoundingBoxAfter(frontX, frontY, dx, dy, size, out int minX, out int minY, out int maxX, out int maxY);
+        return (maxX - minX + 1) * (maxY - minY + 1);
+    }
+
+    private int CountEmptyInBoundingBoxAfter(int frontX, int frontY, int dx, int dy, int size)
+    {
+        GetBoundingBoxAfter(frontX, frontY, dx, dy, size, out int minX, out int minY, out int maxX, out int maxY);
+        int empty = 0;
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int y = minY; y <= maxY; y++)
+            {
+                bool onNewShip = IsOnShip(x, y, frontX, frontY, dx, dy, size);
+                if (onNewShip == false && _cells[x, y])
+                    empty++;
+            }
+        }
+
+        return empty;
+    }
+
+    private void GetBoundingBoxAfter(int frontX, int frontY, int dx, int dy, int size, out int minX, out int minY, out int maxX, out int maxY)
+    {
+        minX = _sizeX;
+        minY = _sizeY;
+        maxX = -1;
+        maxY = -1;
+
+        for (int x = 0; x < _sizeX; x++)
+        {
+            for (int y = 0; y < _sizeY; y++)
+            {
+                bool occupied = _cells[x, y] == false || IsOnShip(x, y, frontX, frontY, dx, dy, size);
+                if (occupied == false)
+                    continue;
+
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+        }
+
+        if (maxX < 0)
+        {
+            minX = 0;
+            minY = 0;
+            maxX = 0;
+            maxY = 0;
+        }
+    }
+
+    private static string FormatShipCells(int frontX, int frontY, int dx, int dy, int size)
+    {
+        var parts = new string[size];
+        for (int i = 0; i < size; i++)
+            parts[i] = $"({frontX - dx * i},{frontY - dy * i})";
+        return string.Join(" -> ", parts);
+    }
+
+    private string BuildOccupancyMap(int noseX = int.MinValue, int noseY = int.MinValue, int dx = 0, int dy = 0, int size = 0)
+    {
+        var lines = new System.Text.StringBuilder();
+        for (int y = _sizeY - 1; y >= 0; y--)
+        {
+            for (int x = 0; x < _sizeX; x++)
+            {
+                if (size > 0 && x == noseX && y == noseY)
+                    lines.Append('N');
+                else if (size > 0 && IsOnShip(x, y, noseX, noseY, dx, dy, size))
+                    lines.Append('B');
+                else if (_cells[x, y] == false)
+                    lines.Append('#');
+                else
+                    lines.Append('.');
+            }
+
+            lines.AppendLine();
+        }
+
+        return lines.ToString();
+    }
+
+    private void LogVisualOverlaps()
+    {
+        Transform parent = _conteiner != null ? _conteiner : transform;
+        var ships = parent.GetComponentsInChildren<ShipView>();
+
+        for (int i = 0; i < ships.Length; i++)
+        {
+            Renderer a = ships[i].VisualRenderer;
+            if (a == null)
+                continue;
+
+            ParkingLog.Info($"Визуал {ships[i].name} bounds={a.bounds.center} size={a.bounds.size}");
+
+            for (int j = i + 1; j < ships.Length; j++)
+            {
+                Renderer b = ships[j].VisualRenderer;
+                if (b == null)
+                    continue;
+
+                if (a.bounds.Intersects(b.bounds))
+                    ParkingLog.Error($"Пересечение мешей: {ships[i].name} и {ships[j].name}");
+            }
+        }
+    }
+
+    private readonly struct RimPlacement
+    {
+        public readonly int FrontX;
+        public readonly int FrontY;
+        public readonly int Dx;
+        public readonly int Dy;
+        public readonly int Score;
+
+        public readonly int Glue;
+
+        public RimPlacement(int frontX, int frontY, int dx, int dy, int score, int glue)
+        {
+            FrontX = frontX;
+            FrontY = frontY;
+            Dx = dx;
+            Dy = dy;
+            Score = score;
+            Glue = glue;
+        }
+    }
+
     public bool TryPlaceShip(ShipData shipData, ShipView shipPrefab)
     {
         EnsureInitialized();
@@ -260,17 +688,16 @@ public class ParkingGrid : MonoBehaviour
 
         Vector3 frontPos = _cellsViewMap[(frontX, frontY)].transform.position;
         Vector3 forward = GetFacingWorldAxis(facing);
-        Quaternion rotation = Quaternion.FromToRotation(Vector3.right, forward);
+
+        Quaternion rotation = Quaternion.LookRotation(forward, Vector3.up);
 
         Transform parent = _conteiner != null ? _conteiner : transform;
         ShipView shipInstance = Instantiate(shipPrefab, frontPos, rotation, parent);
         shipInstance.SetData(shipData);
+        shipInstance.transform.localScale = Vector3.one * 2.5f;
 
-        float cellSize = GetGridAxisX().magnitude;
-        if (cellSize < 0.01f)
-            cellSize = 2.5f;
-
-        shipInstance.transform.localScale = Vector3.one * cellSize;
+        ParkingLog.Info(
+            $"  спавн noseCell=({frontX},{frontY}) dir=({facing.x},{facing.y}) forward={forward} euler={shipInstance.transform.eulerAngles}");
         return shipInstance;
     }
 
