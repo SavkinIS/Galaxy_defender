@@ -28,24 +28,35 @@ public class ShipsPuzzle : MonoBehaviour
             { 3, _shipViewS3 },
         };
 
-        var generator = new LaunchTapeGenerator(_parkingCreator, _waitSlots, _difficulty);
-        _launchTape = generator.Build(_levelData);
+        var solver = new GuaranteedLaunchTapeSolver(
+            _parkingCreator,
+            _parkingGrid,
+            _waitSlots,
+            _difficulty);
+        _launchTape = solver.Build(_levelData);
 
         if (_launchTape == null || _launchTape.Count == 0)
         {
-            ParkingLog.Warn("Лента штурмовиков пустая.");
+            ParkingLog.Warn("Гарантированная лента штурмовиков не создана.");
             _nextIndex = -1;
             return;
         }
 
-        _parkingGrid.ClearOccupancy();
-        _nextIndex = _launchTape.Count - 1;
-        ParkingLog.Info($"Клик ЛКМ — один корабль. Всего {_launchTape.Count}.");
-
-        while (_launchTape.Count > 0 && _nextIndex >= 0)
+        if (_parkingGrid.TryPlaceTapeReverse(_launchTape, GetPrefabBySize) == false)
         {
-            PlaceNextShip();
+            ParkingLog.Error("Solver вернул ленту, но визуальная укладка не прошла.");
+            _launchTape = null;
+            _nextIndex = -1;
+            return;
         }
+
+        _nextIndex = _launchTape.Count - 1;
+        ParkingLog.Info($"Гарантированная лента размещена. Кораблей={_launchTape.Count}, слотов={solver.WaitSlots}.");
+    }
+
+    private ShipView GetPrefabBySize(int size)
+    {
+        return _shipsById.TryGetValue(size, out ShipView prefab) ? prefab : null;
     }
 
     private void PlaceNextShip()

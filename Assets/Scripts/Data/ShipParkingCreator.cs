@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class ShipParkingCreator : MonoBehaviour
@@ -84,6 +82,12 @@ public class ShipParkingCreator : MonoBehaviour
             default:
                 return new List<int> { _shipSize3, _shipSize2, _shipSize1 };
         }
+    }
+
+    public int GetAmmoForSize(int size)
+    {
+        EnsureAmmoTable();
+        return _bulletsBySize.TryGetValue(size, out int ammo) ? ammo : 0;
     }
 
     public List<ShipData> GenerateShipsForColor(int blocksCount, int difficulty, Color color, int colorIndex)

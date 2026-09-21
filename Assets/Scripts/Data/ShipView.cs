@@ -4,6 +4,7 @@ public class ShipView : MonoBehaviour
 {
     [SerializeField] private MeshRenderer _meshRenderer;
     [SerializeField] private int _size;
+    [SerializeField] private BulletsCounterView _currentBullets;
     
     private ShipData _shipData;
     
@@ -15,5 +16,6 @@ public class ShipView : MonoBehaviour
         _shipData = data;
         _meshRenderer.material.color = _shipData.Color;
         gameObject.name = $"{gameObject.name}_bullets{_shipData.CurrentBullets}";
+        _currentBullets.SetCount(_shipData.CurrentBullets);
     }
 }

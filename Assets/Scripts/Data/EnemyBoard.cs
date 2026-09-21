@@ -46,11 +46,50 @@ public class EnemyBoard
             if (cell.X < 0 || cell.X >= width || cell.Y < 0 || cell.Y >= height)
                 continue;
 
+            if (board._cells[cell.X, cell.Y, 0] != Empty)
+                continue;
+
             board._cells[cell.X, cell.Y, 0] = cell.ColorIndex;
             board.RemainingTotal++;
         }
 
         return board;
+    }
+
+    public EnemyBoard Clone()
+    {
+        var clone = new EnemyBoard(Width, Height, Layers)
+        {
+            RemainingTotal = RemainingTotal
+        };
+
+        for (int x = 0; x < Width; x++)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                for (int z = 0; z < Layers; z++)
+                    clone._cells[x, y, z] = _cells[x, y, z];
+            }
+        }
+
+        return clone;
+    }
+
+    public string GetStateKey()
+    {
+        var key = new System.Text.StringBuilder(Width * Height * Layers + 16);
+        key.Append(RemainingTotal).Append('|');
+
+        for (int z = 0; z < Layers; z++)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
+                    key.Append(_cells[x, y, z]).Append(',');
+            }
+        }
+
+        return key.ToString();
     }
 
     public bool IsExposed(int x, int y, int z)

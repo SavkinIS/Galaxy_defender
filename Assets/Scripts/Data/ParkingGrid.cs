@@ -120,6 +120,65 @@ public class ParkingGrid : MonoBehaviour
         return true;
     }
 
+    public bool CanPlaceTapeReverse(IReadOnlyList<ShipData> tape)
+    {
+        EnsureInitialized();
+        bool[,] snapshot = CopyOccupancy();
+        ClearOccupancy();
+
+        for (int i = tape.Count - 1; i >= 0; i--)
+        {
+            ShipData data = tape[i];
+            int size = Mathf.Max(1, data.Size);
+            if (TryFindRimPlacement(size, true, true, out RimPlacement placement) == false &&
+                TryFindRimPlacement(size, false, true, out placement) == false &&
+                TryFindRimPlacement(size, false, false, out placement) == false)
+            {
+                RestoreOccupancy(snapshot);
+                return false;
+            }
+
+            OccupyFromNose(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
+        }
+
+        RestoreOccupancy(snapshot);
+        return true;
+    }
+
+    private bool[,] CopyOccupancy()
+    {
+        var snapshot = new bool[_sizeX, _sizeY];
+        for (int x = 0; x < _sizeX; x++)
+        {
+            for (int y = 0; y < _sizeY; y++)
+                snapshot[x, y] = _cells[x, y];
+        }
+
+        return snapshot;
+    }
+
+    private void RestoreOccupancy(bool[,] snapshot)
+    {
+        for (int x = 0; x < _sizeX; x++)
+        {
+            for (int y = 0; y < _sizeY; y++)
+                _cells[x, y] = snapshot[x, y];
+        }
+
+        _hasOccupiedCells = false;
+        for (int x = 0; x < _sizeX && _hasOccupiedCells == false; x++)
+        {
+            for (int y = 0; y < _sizeY; y++)
+            {
+                if (_cells[x, y] == false)
+                {
+                    _hasOccupiedCells = true;
+                    break;
+                }
+            }
+        }
+    }
+
     public void ClearOccupancy()
     {
         EnsureInitialized();
@@ -196,10 +255,19 @@ public class ParkingGrid : MonoBehaviour
                 return false;
         }
 
+        if (_cellsViewMap == null || _cellsViewMap.ContainsKey((placement.FrontX, placement.FrontY)) == false)
+        {
+            ParkingLog.Error($"Нет визуальной ячейки для носа ({placement.FrontX},{placement.FrontY})");
+            return false;
+        }
+
         OccupyFromNose(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
         DisableOccupiedCells(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
 
         ShipView ship = SpawnShipView(shipData, shipPrefab, placement.FrontX, placement.FrontY, (placement.Dx, placement.Dy));
+        if (ship == null)
+            return false;
+
         TryWorldToCell(ship.transform.position, out int shipCellX, out int shipCellY);
 
         ParkingLog.Info(
@@ -664,13 +732,16 @@ public class ParkingGrid : MonoBehaviour
 
     public void SetSize(int columns, int rows)
     {
-        _sizeX = columns;
-        _sizeY = rows;
+        _sizeX = Mathf.Max(1, columns);
+        _sizeY = Mathf.Max(1, rows);
+        _cells = null;
+        _cellsViewMap = null;
+        EnsureInitialized();
     }
 
     public void SetCells(List<ParkingCell> prefabs)
     {
-        _cellsView = new List<ParkingCell>(prefabs);
+        _cellsView = prefabs == null ? new List<ParkingCell>() : new List<ParkingCell>(prefabs);
         _cellsViewMap = new Dictionary<(int x, int y), ParkingCell>();
 
         foreach (var cell in _cellsView)
