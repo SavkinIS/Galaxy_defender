@@ -14,5 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _difficulty: 5
   _waitingSlots:
-    _minimum: 4
-    _maximum: 7
+    _minimum: 2
+    _maximum: 4
+  _smallShipSize: 1
+  _mediumShipSize: 2
+  _largeShipSize: 3
+  _smallShipAmmo: 10
+  _mediumShipAmmo: 20
+  _largeShipAmmo: 30

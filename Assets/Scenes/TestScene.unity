@@ -469,7 +469,7 @@ MonoBehaviour:
   _parkingCreator: {fileID: 1931428570}
   _parkingGrid: {fileID: 4492555554599267040}
   _levelData: {fileID: 11400000, guid: 9206377f8387e4a2ba26592d267e70e9, type: 2}
-  _generationSettings: {fileID: 11400000, guid: 9c05f2db7dee4473cb36b1f53a75e32e, type: 2}
+  _generationSettings: {fileID: 11400000, guid: 5baf1360f8e4f49eb89e3d00f3a7df09, type: 2}
   _debugLogs: 1
 --- !u!4 &1931428569
 Transform:
@@ -498,9 +498,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30d3674cbd904a09b8d9f824e455f81d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _shipSize1: 1
-  _shipSize2: 2
-  _shipSize3: 3
 --- !u!1 &245805873929279767
 GameObject:
   m_ObjectHideFlags: 0
