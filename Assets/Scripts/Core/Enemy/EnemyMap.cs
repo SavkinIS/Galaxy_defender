@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CellMap : MonoBehaviour
+public class EnemyMap : MonoBehaviour
 {
     [SerializeField] private List<Cell> _cells =  new List<Cell>();
     [SerializeField] private LevelDataSO _levelData;

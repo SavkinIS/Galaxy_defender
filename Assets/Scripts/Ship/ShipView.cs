@@ -10,6 +10,7 @@ public class ShipView : MonoBehaviour
     
     public int Size => _size;
     public Renderer VisualRenderer => _meshRenderer;
+    public ShipData Data => _shipData;
 
     public void SetData(ShipData data)
     {

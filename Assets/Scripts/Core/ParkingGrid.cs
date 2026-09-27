@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Utilites;
-using Random = UnityEngine.Random;
-
 public class ParkingGrid : MonoBehaviour
 {
     [SerializeField] private int _sizeX = 10;
@@ -12,6 +10,7 @@ public class ParkingGrid : MonoBehaviour
 
     private bool[,] _cells;
     private bool _hasOccupiedCells;
+    private Dictionary<ShipData,ShipView> _createdShips;
 
     private readonly (int x, int y)[] _directions =
     {
@@ -23,6 +22,8 @@ public class ParkingGrid : MonoBehaviour
 
     private Dictionary<(int x, int y), ParkingCell> _cellsViewMap;
 
+    public Dictionary<ShipData, ShipView> CreatedShips => _createdShips;
+    
     private void Awake()
     {
         EnsureInitialized();
@@ -95,27 +96,29 @@ public class ParkingGrid : MonoBehaviour
 
     public bool TryPlaceTapeReverse(IReadOnlyList<ShipData> tape, System.Func<int, ShipView> prefabBySize)
     {
+        _createdShips =  new ();
+        
         EnsureInitialized();
         ClearOccupancy();
 
-        ParkingLog.Info($"Укладка с конца: кораблей={tape.Count}, сетка={_sizeX}x{_sizeY}, шаг={GetGridAxisX().magnitude:0.00}");
+        Log.Info($"Укладка с конца: кораблей={tape.Count}, сетка={_sizeX}x{_sizeY}, шаг={GetGridAxisX().magnitude:0.00}");
 
         for (int i = tape.Count - 1; i >= 0; i--)
         {
             ShipData data = tape[i];
             ShipView prefab = prefabBySize(data.Size);
 
-            ParkingLog.Info($"Кладу S{i + 1}/{tape.Count} size={data.Size} цвет={data.ColorIndex} ammo={data.MaxBullets}");
+            Log.Info($"Кладу S{i + 1}/{tape.Count} size={data.Size} цвет={data.ColorIndex} ammo={data.MaxBullets}");
 
             if (prefab == null || TryPlaceOnRim(data, prefab, i) == false)
             {
-                ParkingLog.Error($"Не удалось уложить S{i + 1} size={data.Size}");
-                ParkingLog.Info(BuildOccupancyMap());
+                Log.Error($"Не удалось уложить S{i + 1} size={data.Size}");
+                Log.Info(BuildOccupancyMap());
                 return false;
             }
         }
 
-        ParkingLog.Info("Итоговая стоянка:\n" + BuildOccupancyMap());
+        Log.Info("Итоговая стоянка:\n" + BuildOccupancyMap());
         LogVisualOverlaps();
         return true;
     }
@@ -238,26 +241,26 @@ public class ParkingGrid : MonoBehaviour
         int size = Mathf.Max(1, shipData.Size);
 
         bool withExit = TryFindRimPlacement(size, true, true, out RimPlacement placement);
-        ParkingLog.Info($"  кандидаты с выездом и склейкой: {(withExit ? $"score={placement.Score} glue={placement.Glue} nose=({placement.FrontX},{placement.FrontY}) dir=({placement.Dx},{placement.Dy})" : "нет")}");
+        Log.Info($"  кандидаты с выездом и склейкой: {(withExit ? $"score={placement.Score} glue={placement.Glue} nose=({placement.FrontX},{placement.FrontY}) dir=({placement.Dx},{placement.Dy})" : "нет")}");
 
         if (withExit == false)
         {
             bool glued = TryFindRimPlacement(size, false, true, out placement);
-            ParkingLog.Warn($"  без чистого выезда: {(glued ? $"score={placement.Score} glue={placement.Glue} nose=({placement.FrontX},{placement.FrontY})" : "нет")}");
+            Log.Warn($"  без чистого выезда: {(glued ? $"score={placement.Score} glue={placement.Glue} nose=({placement.FrontX},{placement.FrontY})" : "нет")}");
             withExit = glued;
         }
 
         if (withExit == false)
         {
             bool any = TryFindRimPlacement(size, false, false, out placement);
-            ParkingLog.Warn($"  без склейки (дыра): {(any ? $"score={placement.Score} nose=({placement.FrontX},{placement.FrontY})" : "нет")}");
+            Log.Warn($"  без склейки (дыра): {(any ? $"score={placement.Score} nose=({placement.FrontX},{placement.FrontY})" : "нет")}");
             if (any == false)
                 return false;
         }
 
         if (_cellsViewMap == null || _cellsViewMap.ContainsKey((placement.FrontX, placement.FrontY)) == false)
         {
-            ParkingLog.Error($"Нет визуальной ячейки для носа ({placement.FrontX},{placement.FrontY})");
+            Log.Error($"Нет визуальной ячейки для носа ({placement.FrontX},{placement.FrontY})");
             return false;
         }
 
@@ -268,15 +271,17 @@ public class ParkingGrid : MonoBehaviour
         if (ship == null)
             return false;
 
+        _createdShips[shipData] = ship;
+        
         TryWorldToCell(ship.transform.position, out int shipCellX, out int shipCellY);
 
-        ParkingLog.Info(
+        Log.Info(
             $"  клетки корабля: {FormatShipCells(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size)}");
-        ParkingLog.Info(
+        Log.Info(
             $"  нос клетки=({placement.FrontX},{placement.FrontY}) dir=({placement.Dx},{placement.Dy}) size={size}");
-        ParkingLog.Info(
+        Log.Info(
             $"  позиция корабля world={ship.transform.position} в клетках=({shipCellX},{shipCellY})");
-        ParkingLog.Info("  карта:\n" + BuildOccupancyMap(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size));
+        Log.Info("  карта:\n" + BuildOccupancyMap(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size));
         return true;
     }
 
@@ -321,7 +326,7 @@ public class ParkingGrid : MonoBehaviour
             }
         }
 
-        ParkingLog.Info($"  найдено вариантов (exit={requireClearExit}, glue={requireGlue}): {found.Count}");
+        Log.Info($"  найдено вариантов (exit={requireClearExit}, glue={requireGlue}): {found.Count}");
 
         if (found.Count == 0)
             return false;
@@ -548,7 +553,7 @@ public class ParkingGrid : MonoBehaviour
             if (a == null)
                 continue;
 
-            ParkingLog.Info($"Визуал {ships[i].name} bounds={a.bounds.center} size={a.bounds.size}");
+            Log.Info($"Визуал {ships[i].name} bounds={a.bounds.center} size={a.bounds.size}");
 
             for (int j = i + 1; j < ships.Length; j++)
             {
@@ -557,7 +562,7 @@ public class ParkingGrid : MonoBehaviour
                     continue;
 
                 if (a.bounds.Intersects(b.bounds))
-                    ParkingLog.Error($"Пересечение мешей: {ships[i].name} и {ships[j].name}");
+                    Log.Error($"Пересечение мешей: {ships[i].name} и {ships[j].name}");
             }
         }
     }
@@ -767,7 +772,7 @@ public class ParkingGrid : MonoBehaviour
         shipInstance.SetData(shipData);
         shipInstance.transform.localScale = Vector3.one * 2.5f;
 
-        ParkingLog.Info(
+        Log.Info(
             $"  спавн noseCell=({frontX},{frontY}) dir=({facing.x},{facing.y}) forward={forward} euler={shipInstance.transform.eulerAngles}");
         return shipInstance;
     }
@@ -843,5 +848,4 @@ public class ParkingGrid : MonoBehaviour
 
         return true;
     }
-
 }

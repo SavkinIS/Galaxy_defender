@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class PrefabGridGenerator : MonoBehaviour
 {
@@ -10,7 +11,7 @@ public class PrefabGridGenerator : MonoBehaviour
     [SerializeField] private int _columns = 39;
     [SerializeField] private int _rows = 30;
     [SerializeField] private float _spacing = 1f;
-    [SerializeField] private CellMap _cellMap;
+    [FormerlySerializedAs("_cellMap")] [SerializeField] private EnemyMap enemyMap;
     
     public List <Cell> Prefabs = new  List<Cell>();
 
@@ -47,7 +48,7 @@ public class PrefabGridGenerator : MonoBehaviour
                 instance.name = $"Cell_{x}_{y}";
                 
                 Prefabs.Add(instance);
-                _cellMap.SetCell(instance);
+                enemyMap.SetCell(instance);
             }
         }
 

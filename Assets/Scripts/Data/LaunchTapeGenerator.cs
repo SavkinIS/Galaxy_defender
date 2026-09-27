@@ -26,11 +26,11 @@ public class LaunchTapeGenerator
         EnemyBoard board = EnemyBoard.FromLevel(level);
         if (board.RemainingTotal == 0)
         {
-            ParkingLog.Warn("Враг пустой — лента не из чего собирать.");
+            Log.Warn("Враг пустой — лента не из чего собирать.");
             return new List<ShipData>();
         }
 
-        ParkingLog.Info($"Сборка ленты: блоков={board.RemainingTotal}, P={_waitSlots}, сложность={_difficulty}");
+        Log.Info($"Сборка ленты: блоков={board.RemainingTotal}, P={_waitSlots}, сложность={_difficulty}");
 
         var waiting = new List<ShipData>();
         var tape = new List<ShipData>();
@@ -48,7 +48,7 @@ public class LaunchTapeGenerator
 
         if (board.RemainingTotal > 0)
         {
-            ParkingLog.Error($"Лента вылетов не собралась, осталось блоков: {board.RemainingTotal}");
+            Log.Error($"Лента вылетов не собралась, осталось блоков: {board.RemainingTotal}");
             return null;
         }
 
@@ -59,7 +59,7 @@ public class LaunchTapeGenerator
         summary.Append($"Лента готова, вылетов={tape.Count}: ");
         for (int i = 0; i < tape.Count; i++)
             summary.Append($"S{i + 1}[c{tape[i].ColorIndex}/s{tape[i].Size}/a{tape[i].MaxBullets}] ");
-        ParkingLog.Info(summary.ToString());
+        Log.Info(summary.ToString());
 
         return tape;
     }
@@ -78,7 +78,7 @@ public class LaunchTapeGenerator
             if (stillWaiting == false)
                 waiting.RemoveAt(i);
 
-            ParkingLog.Info($"P-вылет цвет={ship.ColorIndex} патроны={ship.CurrentBullets} осталосьВP={waiting.Count}");
+            Log.Info($"P-вылет цвет={ship.ColorIndex} патроны={ship.CurrentBullets} осталосьВP={waiting.Count}");
             return true;
         }
 
@@ -143,7 +143,7 @@ public class LaunchTapeGenerator
         }
 
         tape.Add(ship);
-        ParkingLog.Info($"S{tape.Count}: цвет={colorIndex} size={size} ammo={ammo} снято={shot} вP={ship.IsAlive} открытоБыло={exposed} остатокЦвета={board.RemainingCount(colorIndex)}");
+        Log.Info($"S{tape.Count}: цвет={colorIndex} size={size} ammo={ammo} снято={shot} вP={ship.IsAlive} открытоБыло={exposed} остатокЦвета={board.RemainingCount(colorIndex)}");
         return true;
     }
 

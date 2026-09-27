@@ -51,11 +51,11 @@ public sealed class GuaranteedLaunchTapeSolver
             for (int i = 0; i < tape.Count; i++)
                 tape[i].ResetAmmo();
 
-            ParkingLog.Info($"Гарантированная лента готова: кораблей={tape.Count}, слотов={_waitSlots}, посещено состояний={_visitedStates}");
+            Log.Info($"Гарантированная лента готова: кораблей={tape.Count}, слотов={_waitSlots}, посещено состояний={_visitedStates}");
             return tape;
         }
 
-        ParkingLog.Error($"Не найдено гарантированное решение. Посещено состояний={_visitedStates}");
+        Log.Error($"Не найдено гарантированное решение. Посещено состояний={_visitedStates}");
         return null;
     }
 
@@ -105,12 +105,12 @@ public sealed class GuaranteedLaunchTapeSolver
                 for (int i = 0; i < tape.Count; i++)
                     tape[i].ResetAmmo();
 
-                ParkingLog.Info($"Однослойная лента готова: кораблей={tape.Count}, слотов={_waitSlots}, попытка={shift + MinColorAttempts}");
+                Log.Info($"Однослойная лента готова: кораблей={tape.Count}, слотов={_waitSlots}, попытка={shift + MinColorAttempts}");
                 return tape;
             }
         }
 
-        ParkingLog.Error("Однослойную ленту не удалось разместить на парковке.");
+        Log.Error("Однослойную ленту не удалось разместить на парковке.");
         return null;
     }
 

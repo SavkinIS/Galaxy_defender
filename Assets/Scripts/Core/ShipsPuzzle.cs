@@ -15,10 +15,13 @@ public class ShipsPuzzle : MonoBehaviour
     private Dictionary<int, ShipView> _shipsById;
     private List<ShipData> _launchTape;
     private int _nextIndex;
+    
+    public List<ShipData> LaunchTape  => _launchTape;
+    public Dictionary<ShipData, ShipView> CreatedShips => _parkingGrid.CreatedShips;
 
-    private void Start()
+    public void Initialize()
     {
-        ParkingLog.Enabled = _debugLogs;
+        Log.Enabled = _debugLogs;
         _parkingCreator.Configure(_generationSettings);
 
         _shipsById = new Dictionary<int, ShipView>
@@ -36,21 +39,21 @@ public class ShipsPuzzle : MonoBehaviour
 
         if (_launchTape == null || _launchTape.Count == 0)
         {
-            ParkingLog.Warn("Гарантированная лента штурмовиков не создана.");
+            Log.Warn("Гарантированная лента штурмовиков не создана.");
             _nextIndex = -1;
             return;
         }
 
         if (_parkingGrid.TryPlaceTapeReverse(_launchTape, GetPrefabBySize) == false)
         {
-            ParkingLog.Error("Solver вернул ленту, но визуальная укладка не прошла.");
+            Log.Error("Solver вернул ленту, но визуальная укладка не прошла.");
             _launchTape = null;
             _nextIndex = -1;
             return;
         }
 
         _nextIndex = _launchTape.Count - 1;
-        ParkingLog.Info($"Гарантированная лента размещена. Кораблей={_launchTape.Count}, слотов={solver.WaitSlots}.");
+        Log.Info($"Гарантированная лента размещена. Кораблей={_launchTape.Count}, слотов={solver.WaitSlots}.");
     }
 
     private ShipView GetPrefabBySize(int size)
@@ -62,24 +65,24 @@ public class ShipsPuzzle : MonoBehaviour
     {
         if (_launchTape == null || _nextIndex < 0)
         {
-            ParkingLog.Warn("Больше кораблей нет.");
+            Log.Warn("Больше кораблей нет.");
             return;
         }
 
         ShipData data = _launchTape[_nextIndex];
         if (_shipsById.TryGetValue(data.Size, out ShipView prefab) == false || prefab == null)
         {
-            ParkingLog.Error($"Нет префаба для size={data.Size}");
+            Log.Error($"Нет префаба для size={data.Size}");
             _nextIndex--;
             return;
         }
 
-        ParkingLog.Info($"Клик: кладу S{_nextIndex + 1}/{_launchTape.Count} size={data.Size} цвет={data.ColorIndex}");
+        Log.Info($"Клик: кладу S{_nextIndex + 1}/{_launchTape.Count} size={data.Size} цвет={data.ColorIndex}");
 
         if (_parkingGrid.TryPlaceOne(data, prefab, _nextIndex) == false)
-            ParkingLog.Error($"Не удалось поставить S{_nextIndex + 1}");
+            Log.Error($"Не удалось поставить S{_nextIndex + 1}");
 
         _nextIndex--;
-        ParkingLog.Info(_nextIndex >= 0 ? $"Осталось кликов: {_nextIndex + 1}" : "Лента закончилась.");
+        Log.Info(_nextIndex >= 0 ? $"Осталось кликов: {_nextIndex + 1}" : "Лента закончилась.");
     }
 }

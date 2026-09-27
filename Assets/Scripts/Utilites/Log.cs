@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public static class ParkingLog
+public static class Log
 {
     public static bool Enabled = true;
 
