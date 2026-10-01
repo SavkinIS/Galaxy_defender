@@ -18,7 +18,7 @@ public class ShipsPuzzle : MonoBehaviour
     
     public List<ShipData> LaunchTape  => _launchTape;
     public Dictionary<ShipData, ShipView> CreatedShips => _parkingGrid.CreatedShips;
-
+    
     public void Initialize()
     {
         Log.Enabled = _debugLogs;
@@ -56,6 +56,11 @@ public class ShipsPuzzle : MonoBehaviour
         Log.Info($"Гарантированная лента размещена. Кораблей={_launchTape.Count}, слотов={solver.WaitSlots}.");
     }
 
+    public bool HasClearExit(RimPlacement placement)
+    {
+      return _parkingGrid.HasClearedExit(placement);
+    }
+    
     private ShipView GetPrefabBySize(int size)
     {
         return _shipsById.TryGetValue(size, out ShipView prefab) ? prefab : null;
@@ -70,6 +75,7 @@ public class ShipsPuzzle : MonoBehaviour
         }
 
         ShipData data = _launchTape[_nextIndex];
+        
         if (_shipsById.TryGetValue(data.Size, out ShipView prefab) == false || prefab == null)
         {
             Log.Error($"Нет префаба для size={data.Size}");

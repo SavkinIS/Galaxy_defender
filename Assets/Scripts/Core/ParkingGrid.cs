@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Utilites;
+
 public class ParkingGrid : MonoBehaviour
 {
     [SerializeField] private int _sizeX = 10;
@@ -148,6 +149,28 @@ public class ParkingGrid : MonoBehaviour
         return true;
     }
 
+    public bool HasClearedExit(RimPlacement placement)
+    {
+        return HasClearExit(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy);
+    }
+    
+    private bool HasClearExit(int frontX, int frontY, int dx, int dy)
+    {
+        int x = frontX + dx;
+        int y = frontY + dy;
+
+        while (x >= 0 && x < _sizeX && y >= 0 && y < _sizeY)
+        {
+            if (IsCellFree(x, y) == false)
+                return false;
+
+            x += dx;
+            y += dy;
+        }
+
+        return true;
+    }
+
     private bool[,] CopyOccupancy()
     {
         var snapshot = new bool[_sizeX, _sizeY];
@@ -270,6 +293,8 @@ public class ParkingGrid : MonoBehaviour
         ShipView ship = SpawnShipView(shipData, shipPrefab, placement.FrontX, placement.FrontY, (placement.Dx, placement.Dy));
         if (ship == null)
             return false;
+        
+        ship.SetPlacement(placement);
 
         _createdShips[shipData] = ship;
         
@@ -366,23 +391,6 @@ public class ParkingGrid : MonoBehaviour
         }
 
         _hasOccupiedCells = true;
-    }
-
-    private bool HasClearExit(int frontX, int frontY, int dx, int dy)
-    {
-        int x = frontX + dx;
-        int y = frontY + dy;
-
-        while (x >= 0 && x < _sizeX && y >= 0 && y < _sizeY)
-        {
-            if (IsCellFree(x, y) == false)
-                return false;
-
-            x += dx;
-            y += dy;
-        }
-
-        return true;
     }
 
     private int CountGlue(int frontX, int frontY, int dx, int dy, int size)
@@ -564,27 +572,6 @@ public class ParkingGrid : MonoBehaviour
                 if (a.bounds.Intersects(b.bounds))
                     Log.Error($"Пересечение мешей: {ships[i].name} и {ships[j].name}");
             }
-        }
-    }
-
-    private readonly struct RimPlacement
-    {
-        public readonly int FrontX;
-        public readonly int FrontY;
-        public readonly int Dx;
-        public readonly int Dy;
-        public readonly int Score;
-
-        public readonly int Glue;
-
-        public RimPlacement(int frontX, int frontY, int dx, int dy, int score, int glue)
-        {
-            FrontX = frontX;
-            FrontY = frontY;
-            Dx = dx;
-            Dy = dy;
-            Score = score;
-            Glue = glue;
         }
     }
 

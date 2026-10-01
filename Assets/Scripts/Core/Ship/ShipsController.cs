@@ -7,10 +7,12 @@ namespace Core.Ship
     {
         private readonly ShipsPuzzle _shipsPuzzle;
         private Dictionary<ShipView, Ship> _ships;
+        private readonly ShipParkingMover _shipParkingMover;
 
-        public ShipsController(ShipsPuzzle shipsPuzzle)
+        public ShipsController(ShipsPuzzle shipsPuzzle, ShipParkingMover shipParkingMover)
         {
             _shipsPuzzle = shipsPuzzle;
+            _shipParkingMover =  shipParkingMover;
         }
 
         public void Initialize()
@@ -26,7 +28,7 @@ namespace Core.Ship
             foreach (var createdShip in createdShips)
             {
                 if (createdShip.Value != null && createdShip.Key != null)
-                    _ships[createdShip.Value] = new Ship(createdShip.Key,  createdShip.Value);
+                    _ships[createdShip.Value] = new Ship(createdShip.Key,  createdShip.Value, _shipParkingMover);
             }
         }
 
@@ -38,13 +40,18 @@ namespace Core.Ship
                 {
                     if (_ships.TryGetValue(shipView, out var ship))
                     {
-                        if (ship != null)
+                        if (ship != null && ship.IsOnParking && CanLeaveParking(ship))
                         {
-                           
+                            ship.EscapeParking();
                         }
                     }
                 }
             } 
+        }
+
+        private bool CanLeaveParking(Ship ship)
+        {
+            return _shipsPuzzle.HasClearExit(ship.Placement);
         }
     }
 }
