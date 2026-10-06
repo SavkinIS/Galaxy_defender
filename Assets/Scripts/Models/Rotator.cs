@@ -1,13 +1,20 @@
 using UnityEngine;
 
-public class Rotator : MonoBehaviour
+public class Rotator
 {
+    private readonly Transform _transform;
+
+    public Rotator(Transform transform)
+    {
+        _transform = transform;
+    }
+    
     public void LookAtPoint(Vector3 targetPosition)
     {
-        var direction = targetPosition - transform.position;
+        var direction = targetPosition - _transform.position;
         if (direction.sqrMagnitude < 0.000001f)
             return;
 
-        transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+        _transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
     }
 }

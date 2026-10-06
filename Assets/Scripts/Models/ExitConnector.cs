@@ -15,7 +15,6 @@ public class ExitConnector : MonoBehaviour
         return isPositiveDirection ? _pathPointPositive : _pathPointNegative;
     }
 
-
     private void OnValidate()
     {
         if (_pathPointPositive != null)

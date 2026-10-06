@@ -24,11 +24,7 @@ public class ShipParkingMover : MonoBehaviour
             ? _exitConnectorsHolder.GetPathPoint_Y(line, isPositiveDirection)
             : _exitConnectorsHolder.GetPathPoint_X(line, isPositiveDirection);
 
-        var rotator = ship.GetComponent<Rotator>();
-        if (rotator == null)
-            rotator = ship.gameObject.AddComponent<Rotator>();
-
-        var mover = new Mover(ship, _path.GetPathPoints(point), _duration, onEscape, rotator, onPointReached);
+        var mover = new Mover(ship, _path.GetPathPoints(point), _duration, onEscape, onPointReached);
         StartCoroutine(mover.Move());
     }
 }
@@ -47,15 +43,15 @@ public class Mover
         List<PathPoint> path,
         float duration,
         Action onComplete,
-        Rotator rotator,
         Action<PathPoint> onPointReached = null)
     {
         _moveObject = moveObject;
         _path = path;
         _duration = duration;
         _onComplete = onComplete;
-        _rotator = rotator;
         _onPointReached = onPointReached;
+        
+        _rotator = new Rotator(moveObject);
     }
 
     public IEnumerator Move()
