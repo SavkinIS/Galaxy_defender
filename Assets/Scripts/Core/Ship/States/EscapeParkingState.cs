@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Core.Ship.States
 {
     public class EscapeParkingState : IShipState
@@ -13,36 +15,22 @@ namespace Core.Ship.States
 
         public void Enter()
         {
-            int line = 0;
+            var placement = _ship.Placement;
+            bool isMovingAlongX = placement.EndY == -1;
+            int line = isMovingAlongX ? placement.FrontY : placement.FrontX;
+            bool isPositiveDirection = isMovingAlongX ? placement.EndX == 0 : placement.EndY > 0;
 
-            if (_ship.IsX)
-            {
-                if (_ship.Placement.FrontX > 4)
-                {
-                    line = _ship.Placement.FrontX;
-                }
-                else
-                {
-                    line = _ship.Placement.FrontX * -1;
-                }
-            }
-            else
-            {
-                if (_ship.Placement.FrontY > 4)
-                {
-                    line = _ship.Placement.FrontY;
-                }
-                else
-                {
-                    line = _ship.Placement.FrontY * -1;
-                }
-            }
-            
-            _shipParkingMover.EscapeFromParking(_ship.Transform, line, _ship.IsX, OnComplete);
+            _shipParkingMover.EscapeFromParking(
+                _ship.Transform,
+                line,
+                isMovingAlongX,
+                isPositiveDirection,
+                OnComplete);
         }
 
         private void OnComplete()
         {
+            _ship.ReleaseParkingCells();
             _ship.ParkingEscaped();
         }
 

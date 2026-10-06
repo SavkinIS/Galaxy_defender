@@ -9,18 +9,10 @@ public class ExitConnector : MonoBehaviour
     [SerializeField] private bool _isX = true;
 
     public int Line => _line;
-    
-    public PathPoint GetPathPoint(int line)
-    {
-        if (Mathf.Abs(line) == Mathf.Abs(_line))
-        {
-            if (line < _line)      
-                return _pathPointNegative;
-            
-            return _pathPointPositive;
-        }
 
-        return null;
+    public PathPoint GetPathPoint(bool isPositiveDirection)
+    {
+        return isPositiveDirection ? _pathPointPositive : _pathPointNegative;
     }
 
 

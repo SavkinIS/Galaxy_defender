@@ -60,6 +60,11 @@ public class ShipsPuzzle : MonoBehaviour
     {
       return _parkingGrid.HasClearedExit(placement);
     }
+
+    public void ReleaseShipCells(RimPlacement placement, int size)
+    {
+      _parkingGrid.ReleaseOccupiedCells(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
+    }
     
     private ShipView GetPrefabBySize(int size)
     {

@@ -15,23 +15,23 @@ public class ExitConnectorsHolder : MonoBehaviour
         _connectorsByLines_Y = _exitConnectorsY.ToDictionary(l => l.Line);
     }
 
-    public PathPoint GetPathPoint_X(int line)
+    public PathPoint GetPathPoint_X(int line, bool isPositiveDirection)
     {
-        if (_connectorsByLines_X.TryGetValue(Mathf.Abs(line), out ExitConnector connector))
+        if (_connectorsByLines_X.TryGetValue(line, out ExitConnector connector))
         {
-            return connector.GetPathPoint(line);
+            return connector.GetPathPoint(isPositiveDirection);
         }
-        
+
         return null;
     }
-    
-    public PathPoint GetPathPoint_Y(int line)
+
+    public PathPoint GetPathPoint_Y(int line, bool isPositiveDirection)
     {
-        if (_connectorsByLines_Y.TryGetValue(Mathf.Abs(line), out ExitConnector connector))
+        if (_connectorsByLines_Y.TryGetValue(line, out ExitConnector connector))
         {
-            return connector.GetPathPoint(line);
+            return connector.GetPathPoint(isPositiveDirection);
         }
-        
+
         return null;
     }
 }

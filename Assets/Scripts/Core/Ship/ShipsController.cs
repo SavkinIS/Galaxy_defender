@@ -28,7 +28,11 @@ namespace Core.Ship
             foreach (var createdShip in createdShips)
             {
                 if (createdShip.Value != null && createdShip.Key != null)
-                    _ships[createdShip.Value] = new Ship(createdShip.Key,  createdShip.Value, _shipParkingMover);
+                    _ships[createdShip.Value] = new Ship(
+                        createdShip.Key,
+                        createdShip.Value,
+                        _shipParkingMover,
+                        _shipsPuzzle.ReleaseShipCells);
             }
         }
 

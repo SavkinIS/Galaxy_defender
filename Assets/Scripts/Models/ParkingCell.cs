@@ -22,6 +22,6 @@ public class ParkingCell : MonoBehaviour
 
     private void OnValidate()
     {
-        _cellTxt.text = $"{X},{Y}";
+        //_cellTxt.text = $"{X},{Y}";
     }
 }

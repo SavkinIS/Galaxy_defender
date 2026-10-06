@@ -19161,7 +19161,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 77f8f3e390b04a5884f640a49555097c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _targetPont: {fileID: 0}
+  _targetPont: {fileID: 619443272}
 --- !u!1 &1807878990
 GameObject:
   m_ObjectHideFlags: 0
@@ -20210,7 +20210,7 @@ MonoBehaviour:
   _parkingCreator: {fileID: 1931428570}
   _parkingGrid: {fileID: 4492555554599267040}
   _levelData: {fileID: 11400000, guid: 9206377f8387e4a2ba26592d267e70e9, type: 2}
-  _generationSettings: {fileID: 11400000, guid: 5baf1360f8e4f49eb89e3d00f3a7df09, type: 2}
+  _generationSettings: {fileID: 11400000, guid: 9c05f2db7dee4473cb36b1f53a75e32e, type: 2}
   _debugLogs: 1
 --- !u!4 &1931428569
 Transform:

@@ -30,13 +30,13 @@ public class Path : MonoBehaviour
     {
         List<Vector3> points = new List<Vector3>();
 
-        int startIndex = _points.IndexOf(startPoint);
-        
-        for (int i = startIndex; i >= 0; i--)
+        points.Add(startPoint.Transform.position);
+        var target = startPoint.TargetPont;
+
+        while (target != null)
         {
-            var point = _points[i];
-            if (point.TargetPont != null) 
-                points.Add(_points[i].Transform.position);
+            points.Add(target.Transform.position);
+            target = target.TargetPont;
         }
         
         return points.ToArray();

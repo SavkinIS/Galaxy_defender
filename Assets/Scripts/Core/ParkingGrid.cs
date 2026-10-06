@@ -224,6 +224,36 @@ public class ParkingGrid : MonoBehaviour
             pair.Value.SetOccupied(false);
     }
 
+    public void ReleaseOccupiedCells(int frontX, int frontY, int dx, int dy, int size)
+    {
+        EnsureInitialized();
+
+        for (int i = 0; i < size; i++)
+        {
+            int x = frontX - dx * i;
+            int y = frontY - dy * i;
+            if (x < 0 || x >= _sizeX || y < 0 || y >= _sizeY)
+                continue;
+
+            _cells[x, y] = true;
+            if (_cellsViewMap != null && _cellsViewMap.TryGetValue((x, y), out ParkingCell cell))
+                cell.SetOccupied(false);
+        }
+
+        _hasOccupiedCells = false;
+        for (int x = 0; x < _sizeX && _hasOccupiedCells == false; x++)
+        {
+            for (int y = 0; y < _sizeY; y++)
+            {
+                if (_cells[x, y] == false)
+                {
+                    _hasOccupiedCells = true;
+                    break;
+                }
+            }
+        }
+    }
+
     private void DisableOccupiedCells(int frontX, int frontY, int dx, int dy, int size)
     {
         for (int i = 0; i < size; i++)
@@ -346,7 +376,9 @@ public class ParkingGrid : MonoBehaviour
                         score = 1000 - Mathf.RoundToInt(dist * 20f) + Mathf.RoundToInt(outward * 4f);
                     }
 
-                    found.Add(new RimPlacement(fx, fy, dx, dy, score, glue));
+                    int endX = dx == 0 ? -1 : dx > 0 ? _sizeX - 1 : 0;
+                    int endY = dy == 0 ? -1 : dy > 0 ? _sizeY - 1 : 0;
+                    found.Add(new RimPlacement(fx, fy, dx, dy, endX, endY, score, glue));
                 }
             }
         }

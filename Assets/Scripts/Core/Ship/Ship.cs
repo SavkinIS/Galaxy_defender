@@ -11,12 +11,14 @@ namespace Core.Ship
         private readonly ShipStateMachine _stateMachine;
         private bool _isOnParking;
         private readonly ShipParkingMover _shipParkingMover;
+        private readonly Action<RimPlacement, int> _releaseParkingCells;
 
-        public Ship(ShipData shipData, ShipView view, ShipParkingMover shipParkingMover)
+        public Ship(ShipData shipData, ShipView view, ShipParkingMover shipParkingMover, Action<RimPlacement, int> releaseParkingCells)
         {
             _shipData = shipData;
             _view =  view;
             _shipParkingMover  = shipParkingMover;
+            _releaseParkingCells = releaseParkingCells;
 
             _stateMachine = new ShipStateMachine(_shipParkingMover, this);
             _isOnParking = true;
@@ -28,6 +30,11 @@ namespace Core.Ship
         
         public RimPlacement Placement => _view.Placement;
         public bool IsX => Placement.Dx != 0 && Math.Abs(Placement.Dx) > Math.Abs(Placement.Dy);
+
+        public void ReleaseParkingCells()
+        {
+            _releaseParkingCells(Placement, _shipData.Size);
+        }
 
         public void EscapeParking()
         {
