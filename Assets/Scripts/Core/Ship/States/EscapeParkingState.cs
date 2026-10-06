@@ -6,6 +6,7 @@ namespace Core.Ship.States
     {
         private readonly ShipParkingMover _shipParkingMover;
         private readonly Ship _ship;
+        private bool _releasedCells;
 
         public EscapeParkingState(ShipParkingMover shipParkingMover, Ship ship)
         {
@@ -15,6 +16,7 @@ namespace Core.Ship.States
 
         public void Enter()
         {
+            _releasedCells = false;
             var placement = _ship.Placement;
             bool isMovingAlongX = placement.EndY == -1;
             int line = isMovingAlongX ? placement.FrontY : placement.FrontX;
@@ -25,18 +27,25 @@ namespace Core.Ship.States
                 line,
                 isMovingAlongX,
                 isPositiveDirection,
-                OnComplete);
+                OnComplete, OnPointReached);
+        }
+
+        private void OnPointReached(PathPoint point)
+        {
+            if (_releasedCells == false)
+            {
+                _releasedCells = true;
+                _ship.ReleaseParkingCells();
+            }
         }
 
         private void OnComplete()
         {
-            _ship.ReleaseParkingCells();
             _ship.ParkingEscaped();
         }
 
         public void Exit()
         {
-           
         }
     }
 }

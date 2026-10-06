@@ -28,8 +28,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -0.0207}
-  m_LocalScale: {x: 1, y: 1, z: 3}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.88, y: 0.88, z: 2.6399999}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 3824219324945545252}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -457,6 +457,7 @@ GameObject:
   - component: {fileID: 3824219324945545252}
   - component: {fileID: 2107361238621922239}
   - component: {fileID: 4472233091861503667}
+  - component: {fileID: 6387357512443901428}
   m_Layer: 0
   m_Name: Head
   m_TagString: Untagged
@@ -531,6 +532,27 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &6387357512443901428
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8777604456637042502}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.02, y: 0.02, z: 0.06084891}
+  m_Center: {x: 0, y: 0, z: -0.02042447}
 --- !u!1001 &208775143584441771
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -41,4 +41,20 @@ public class Path : MonoBehaviour
         
         return points.ToArray();
     }
+
+    public List<PathPoint> GetPathPoints(PathPoint startPoint)
+    {
+        List<PathPoint> points = new  List<PathPoint>();
+
+        points.Add(startPoint);
+        var target = startPoint .TargetPont;
+
+        while (target != null)
+        {
+            points.Add(target);
+            target = target.TargetPont;
+        }
+        
+        return points;
+    }
 }
