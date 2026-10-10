@@ -4,26 +4,65 @@ using UnityEngine;
 public class Path : MonoBehaviour
 {
     [SerializeField] private List<PathPoint> _points;
+    [SerializeField] private PathPoint _pointPrefab;
 
-    private Vector3[] _pointsPosition = null;
-    
+    public PathPoint PointPrefab => _pointPrefab;
+    public int PointCount => _points == null ? 0 : _points.Count;
+
     public Vector3[] Points
     {
         get
         {
-            if (_pointsPosition == null)
-            {
-                _pointsPosition = new Vector3[_points.Count];
+            var positions = new Vector3[PointCount];
+            for (var index = 0; index < PointCount; index++)
+                positions[index] = GetPoint(index).Transform.position;
 
-                for (var index = 0; index < _points.Count; index++)
-                {
-                    var point = _points[index];
-                    _pointsPosition[index] = point.Transform.position;
-                }
-            }
-            
-            return _pointsPosition;
+            return positions;
         }
+    }
+
+    public PathPoint GetPoint(int index)
+    {
+        return _points[index];
+    }
+
+    public Vector3[] GetSegmentPoints(int segmentIndex, int resolution = 24)
+    {
+        if (segmentIndex < 0 || segmentIndex >= PointCount)
+            return new Vector3[0];
+
+        var startPoint = _points[segmentIndex];
+        if (startPoint == null)
+            return new Vector3[0];
+
+        var endPoint = startPoint.TargetPont;
+        if (endPoint == null)
+            return new Vector3[0];
+
+        resolution = Mathf.Max(1, resolution);
+        var start = startPoint.Transform.position;
+        var end = endPoint.Transform.position;
+        var control1 = startPoint.GetOutgoingControlPoint(endPoint);
+        var control2 = endPoint.GetIncomingControlPoint(start);
+        var positions = new Vector3[resolution + 1];
+
+        for (var index = 0; index <= resolution; index++)
+        {
+            var t = (float)index / resolution;
+            positions[index] = PathPoint.EvaluateBezier(start, control1, control2, end, t);
+        }
+
+        return positions;
+    }
+
+    public float GetSegmentLength(int segmentIndex, int resolution = 24)
+    {
+        var positions = GetSegmentPoints(segmentIndex, resolution);
+        var length = 0f;
+        for (var index = 1; index < positions.Length; index++)
+            length += Vector3.Distance(positions[index - 1], positions[index]);
+
+        return length;
     }
 
     public Vector3[] GetPointsByPoint(PathPoint startPoint)
