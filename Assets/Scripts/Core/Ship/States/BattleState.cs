@@ -25,6 +25,8 @@ namespace Core.Ship.States
 
         private void OnPointReached(PathPoint point)
         {
+            Log.Info($"Point {point} was reached");
+            
             if (_ship.TryShoot(point) && _ship.IsEmpty)
             {
             }

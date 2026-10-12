@@ -8,6 +8,7 @@ public class Cell : MonoBehaviour
     [SerializeField] private int _y = 0;
     public int Y => _y;
     public int X => _x;
+    public bool IsActive => gameObject.activeSelf;
 
     public void SetIndex(int x, int y)
     {

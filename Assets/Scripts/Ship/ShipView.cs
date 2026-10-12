@@ -27,4 +27,9 @@ public class ShipView : MonoBehaviour
     {
         _placement = placement;
     }
+
+    public void Refresh()
+    {
+        _currentBullets.SetCount(_shipData.CurrentBullets);
+    }
 }

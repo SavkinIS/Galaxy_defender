@@ -12,14 +12,18 @@ namespace Core.Ship
         private bool _isOnParking;
         private readonly ShipParkingMover _shipParkingMover;
         private readonly Action<RimPlacement, int> _releaseParkingCells;
+        private readonly ShipShooterProvider _shootProvider;
 
-        public Ship(ShipData shipData, ShipView view, ShipParkingMover shipParkingMover, Action<RimPlacement, int> releaseParkingCells,BattleShipMover shipBattleMover)
+        public Ship(ShipData shipData, ShipView view, ShipParkingMover shipParkingMover,
+            Action<RimPlacement, int> releaseParkingCells, BattleShipMover shipBattleMover,
+            ShipShooterProvider shootProvider)
         {
             _shipData = shipData;
             _view =  view;
             _shipParkingMover  = shipParkingMover;
             _releaseParkingCells = releaseParkingCells;
-
+            _shootProvider =  shootProvider;
+            
             _stateMachine = new ShipStateMachine(_shipParkingMover, this, shipBattleMover);
             _isOnParking = true;
         }
@@ -52,12 +56,23 @@ namespace Core.Ship
 
         public bool TryShoot(PathPoint point)
         {
+            if (_shootProvider.HasTargetForShoot(point))
+            {
+                _shootProvider.Shoot(point);
+                Shoot();
+                
+                Log.Info($"Shoot on {point}");
+                
+                return true;
+            }
+            
             return false;
         }
 
         private void Shoot()
         {
             _shipData.DecreaseBullets();
+            _view.Refresh();
         }
 
         public void EndRound()
