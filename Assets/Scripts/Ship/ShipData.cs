@@ -15,7 +15,7 @@ public class ShipData
         ColorIndex = colorIndex;
     }
 
-    public bool IsAlive => CurrentBullets > 0;
+    public bool HasBullets => CurrentBullets > 0;
     public int Size { get;}
     public int MaxBullets { get;}
     public int ColorIndex{ get; }
@@ -34,7 +34,7 @@ public class ShipData
 
         CurrentBullets = Mathf.Max(0, CurrentBullets - amount);
 
-        if (IsAlive == false)
+        if (HasBullets == false)
             Cleared?.Invoke();
     }
 

@@ -9,14 +9,14 @@ namespace Core.Ship.States
         
         private IShipState _currentState;
 
-        public ShipStateMachine(ShipParkingMover shipParkingMover, Ship ship)
+        public ShipStateMachine(ShipParkingMover shipParkingMover, Ship ship, BattleShipMover shipBattleMover)
         {
             _states = new Dictionary<Type, IShipState>()
             {
                 {typeof(ParkingState), new ParkingState()},
                 {typeof(EscapeParkingState), new EscapeParkingState(shipParkingMover, ship)},
                 //{typeof(MoveToBattleFromParkingState), new MoveToBattleFromParkingState()},
-                {typeof(BattleState), new BattleState()},
+                {typeof(BattleState), new BattleState(ship, shipBattleMover)},
                 {typeof(EndBattleRoundState), new EndBattleRoundState()},
                 {typeof(WaitingState), new WaitingState()},
                 {typeof(MoveToBattleFromWaitingZone), new MoveToBattleFromWaitingZone()},

@@ -125,7 +125,7 @@ public sealed class GuaranteedLaunchTapeSolver
         {
             for (int i = 0; i < waiting.Count; i++)
             {
-                if (waiting[i].IsAlive)
+                if (waiting[i].HasBullets)
                     return false;
             }
 
@@ -148,7 +148,7 @@ public sealed class GuaranteedLaunchTapeSolver
 
             var nextWaiting = CloneShips(waiting);
             nextWaiting[i] = nextShip;
-            if (nextShip.IsAlive == false)
+            if (nextShip.HasBullets == false)
                 nextWaiting.RemoveAt(i);
 
             if (Search(level, nextBoard, nextWaiting, new List<ShipData>(tape)))
@@ -175,7 +175,7 @@ public sealed class GuaranteedLaunchTapeSolver
                 Fire(nextShip, nextBoard);
 
                 var nextWaiting = CloneShips(waiting);
-                if (nextShip.IsAlive)
+                if (nextShip.HasBullets)
                     nextWaiting.Add(nextShip);
 
                 if (nextWaiting.Count > _waitSlots)

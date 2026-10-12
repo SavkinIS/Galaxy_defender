@@ -8,11 +8,13 @@ namespace Core.Ship
         private readonly ShipsPuzzle _shipsPuzzle;
         private Dictionary<ShipView, Ship> _ships;
         private readonly ShipParkingMover _shipParkingMover;
+        private readonly BattleShipMover _shipBattleMover;
 
-        public ShipsController(ShipsPuzzle shipsPuzzle, ShipParkingMover shipParkingMover)
+        public ShipsController(ShipsPuzzle shipsPuzzle, ShipParkingMover shipParkingMover,  BattleShipMover shipBattleMover)
         {
             _shipsPuzzle = shipsPuzzle;
             _shipParkingMover =  shipParkingMover;
+            _shipBattleMover = shipBattleMover;
         }
 
         public void Initialize()
@@ -32,7 +34,7 @@ namespace Core.Ship
                         createdShip.Key,
                         createdShip.Value,
                         _shipParkingMover,
-                        _shipsPuzzle.ReleaseShipCells);
+                        _shipsPuzzle.ReleaseShipCells, _shipBattleMover);
             }
         }
 

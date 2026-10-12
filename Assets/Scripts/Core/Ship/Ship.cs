@@ -13,14 +13,14 @@ namespace Core.Ship
         private readonly ShipParkingMover _shipParkingMover;
         private readonly Action<RimPlacement, int> _releaseParkingCells;
 
-        public Ship(ShipData shipData, ShipView view, ShipParkingMover shipParkingMover, Action<RimPlacement, int> releaseParkingCells)
+        public Ship(ShipData shipData, ShipView view, ShipParkingMover shipParkingMover, Action<RimPlacement, int> releaseParkingCells,BattleShipMover shipBattleMover)
         {
             _shipData = shipData;
             _view =  view;
             _shipParkingMover  = shipParkingMover;
             _releaseParkingCells = releaseParkingCells;
 
-            _stateMachine = new ShipStateMachine(_shipParkingMover, this);
+            _stateMachine = new ShipStateMachine(_shipParkingMover, this, shipBattleMover);
             _isOnParking = true;
         }
         
@@ -30,7 +30,9 @@ namespace Core.Ship
         
         public RimPlacement Placement => _view.Placement;
         public bool IsX => Placement.Dx != 0 && Math.Abs(Placement.Dx) > Math.Abs(Placement.Dy);
-
+        
+        public bool IsEmpty => _shipData.HasBullets;
+        
         public void ReleaseParkingCells()
         {
             _releaseParkingCells(Placement, _shipData.Size);
@@ -46,6 +48,21 @@ namespace Core.Ship
         public void ParkingEscaped()
         {
             _stateMachine.ChangeState(typeof(BattleState));
+        }
+
+        public bool TryShoot(PathPoint point)
+        {
+            return false;
+        }
+
+        private void Shoot()
+        {
+            _shipData.DecreaseBullets();
+        }
+
+        public void EndRound()
+        {
+           // _stateMachine.ChangeState(typeof());
         }
     }
 }

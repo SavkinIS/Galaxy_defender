@@ -74,7 +74,7 @@ public class LaunchTapeGenerator
 
             Fire(ship, board);
 
-            bool stillWaiting = ship.IsAlive;
+            bool stillWaiting = ship.HasBullets;
             if (stillWaiting == false)
                 waiting.RemoveAt(i);
 
@@ -134,7 +134,7 @@ public class LaunchTapeGenerator
 
         Fire(ship, board);
 
-        if (ship.IsAlive)
+        if (ship.HasBullets)
         {
             if (waiting.Count >= _waitSlots)
                 return false;
@@ -143,7 +143,7 @@ public class LaunchTapeGenerator
         }
 
         tape.Add(ship);
-        Log.Info($"S{tape.Count}: цвет={colorIndex} size={size} ammo={ammo} снято={shot} вP={ship.IsAlive} открытоБыло={exposed} остатокЦвета={board.RemainingCount(colorIndex)}");
+        Log.Info($"S{tape.Count}: цвет={colorIndex} size={size} ammo={ammo} снято={shot} вP={ship.HasBullets} открытоБыло={exposed} остатокЦвета={board.RemainingCount(colorIndex)}");
         return true;
     }
 

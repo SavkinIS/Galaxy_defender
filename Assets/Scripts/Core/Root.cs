@@ -10,12 +10,13 @@ namespace Core
         [SerializeField] private EnemyMap _enemyMap;
         [SerializeField] private ShipsPuzzle _puzzle;
         [SerializeField] private ShipParkingMover _shipParkingMover;
+        [SerializeField] private BattleShipMover _battleShipMover;
         
         private ShipsController _shipsController;
 
         private void Awake()
         {
-            _shipsController = new ShipsController(_puzzle, _shipParkingMover);
+            _shipsController = new ShipsController(_puzzle, _shipParkingMover, _battleShipMover);
         }
 
         private void Start()

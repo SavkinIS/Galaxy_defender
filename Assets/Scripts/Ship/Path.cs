@@ -9,24 +9,14 @@ public class Path : MonoBehaviour
     public PathPoint PointPrefab => _pointPrefab;
     public int PointCount => _points == null ? 0 : _points.Count;
 
-    public Vector3[] Points
-    {
-        get
-        {
-            var positions = new Vector3[PointCount];
-            for (var index = 0; index < PointCount; index++)
-                positions[index] = GetPoint(index).Transform.position;
-
-            return positions;
-        }
-    }
-
+    public List<PathPoint> Points => _points;
+    
     public PathPoint GetPoint(int index)
     {
         return _points[index];
     }
 
-    public Vector3[] GetSegmentPoints(int segmentIndex, int resolution = 24)
+    private Vector3[] GetSegmentPoints(int segmentIndex, int resolution = 24)
     {
         if (segmentIndex < 0 || segmentIndex >= PointCount)
             return new Vector3[0];

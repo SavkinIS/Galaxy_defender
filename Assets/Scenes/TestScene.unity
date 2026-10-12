@@ -4469,6 +4469,7 @@ MonoBehaviour:
   _enemyMap: {fileID: 1548657294540180334}
   _puzzle: {fileID: 1931428568}
   _shipParkingMover: {fileID: 935077096}
+  _battleShipMover: {fileID: 935077097}
 --- !u!4 &624987140
 Transform:
   m_ObjectHideFlags: 0
@@ -7535,6 +7536,7 @@ GameObject:
   m_Component:
   - component: {fileID: 935077095}
   - component: {fileID: 935077096}
+  - component: {fileID: 935077097}
   m_Layer: 0
   m_Name: ' Mover'
   m_TagString: Untagged
@@ -7570,8 +7572,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _exitConnectorsHolder: {fileID: 1978329279}
-  _duration: 5
+  _duration: 3
   _path: {fileID: 449438280}
+--- !u!114 &935077097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 935077094}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 008fedfcd505472898cdf37a4ae7b9f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _duration: 5
+  _path: {fileID: 1324321182}
 --- !u!1 &935622397
 GameObject:
   m_ObjectHideFlags: 0
