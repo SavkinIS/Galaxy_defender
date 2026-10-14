@@ -56,17 +56,14 @@ namespace Core.Ship
 
         public bool TryShoot(PathPoint point)
         {
-            if (_shootProvider.HasTargetForShoot(point))
-            {
-                _shootProvider.Shoot(point);
-                Shoot();
-                
-                Log.Info($"Shoot on {point}");
-                
-                return true;
-            }
-            
-            return false;
+            if (!_shootProvider.TryShoot(point, _shipData.ColorIndex))
+                return false;
+
+            Shoot();
+
+            Log.Info($"Shoot on {point}");
+
+            return true;
         }
 
         private void Shoot()

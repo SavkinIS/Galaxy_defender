@@ -8,6 +8,7 @@ public class EnemyMap : MonoBehaviour
     [SerializeField] private LevelDataSO _levelData;
 
     private List<Cell> _activeCells = new List<Cell>();
+    
     private Dictionary<(int x, int y), Cell> _cellMap = new();
     
     private void Awake()
@@ -39,15 +40,31 @@ public class EnemyMap : MonoBehaviour
         }
     }
 
-    public bool CanDestroyCell((int x, int y) targetCellIndex)
+    public bool TryGetTargetCellIndex((int x, int y) startCellIndex,
+        (int x, int y) direction, int colorIndex, out (int x, int y) targetCellIndex)
     {
-        // Найти боижайший по Линии
-        
-        if (_cellMap.TryGetValue(targetCellIndex, out var cell))
+        targetCellIndex = (-1, -1);
+
+        if (direction.x == 0 && direction.y == 0)
+            return false;
+
+        var currentCellIndex = startCellIndex;
+
+        while (currentCellIndex.x >= 0 && currentCellIndex.x < _levelData.Width &&
+               currentCellIndex.y >= 0 && currentCellIndex.y < _levelData.Height)
         {
-            return cell.IsActive;
+            if (_cellMap.TryGetValue(currentCellIndex, out var cell) && cell.IsActive)
+            {
+                if (_levelData.GetCell(currentCellIndex.x, currentCellIndex.y).ColorIndex != colorIndex)
+                    return false;
+
+                targetCellIndex = currentCellIndex;
+                return true;
+            }
+
+            currentCellIndex = (currentCellIndex.x + direction.x, currentCellIndex.y + direction.y);
         }
-        
+
         return false;
     }
 

@@ -10,6 +10,23 @@ public class EnemyCellConnector : MonoBehaviour
     [SerializeField] private List<PathPoint> _pathPointsLeft;
     [SerializeField] private List<PathPoint> _pathPointsRight;
 
+    public (int x, int y) GetSearchDirection(PathPoint point)
+    {
+        if (point == null)
+            throw new ArgumentNullException(nameof(point));
+
+        if (_pathPointsDown.Contains(point))
+            return (0, 1);
+        if (_pathPointsUp.Contains(point))
+            return (0, -1);
+        if (_pathPointsLeft.Contains(point))
+            return (1, 0);
+        if (_pathPointsRight.Contains(point))
+            return (-1, 0);
+
+        return (0, 0);
+    }
+
     public (int x, int y) GetCellIndex(PathPoint point)
     {
         if (point == null)

@@ -14,26 +14,20 @@ namespace Core.Ship
             _enemyCellConnector = enemyCellConnector;
         }
 
-        public bool HasTargetForShoot(PathPoint position)
+        public bool TryShoot(PathPoint point, int colorIndex)
         {
-            var targetCellIndex =  _enemyCellConnector.GetCellIndex(position);
-            
-            if (targetCellIndex.x < 0 || targetCellIndex.y < 0)
+            var startCellIndex = _enemyCellConnector.GetCellIndex(point);
+
+            if (startCellIndex.x < 0 || startCellIndex.y < 0)
                 return false;
-            
-            
-           return _enemyMap.CanDestroyCell(targetCellIndex);
-            
-        }
 
-        public void Shoot(PathPoint point)
-        {
-            var targetCellIndex =  _enemyCellConnector.GetCellIndex(point);
+            var direction = _enemyCellConnector.GetSearchDirection(point);
 
-            if (targetCellIndex.x < 0 || targetCellIndex.y < 0)
-                return;
-            
+            if (!_enemyMap.TryGetTargetCellIndex(startCellIndex, direction, colorIndex, out var targetCellIndex))
+                return false;
+
             _enemyMap.DestroyCell(targetCellIndex);
+            return true;
         }
     }
     
