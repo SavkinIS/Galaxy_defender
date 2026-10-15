@@ -14,4 +14,14 @@ public class BulletsCounterView : MonoBehaviour
         
         _bulletsCount.text = count.ToString();
     }
+
+    public void Enable()
+    {
+        gameObject.SetActive(true);
+    }
+
+    public void Disable()
+    {
+        gameObject.SetActive(false);
+    }
 }

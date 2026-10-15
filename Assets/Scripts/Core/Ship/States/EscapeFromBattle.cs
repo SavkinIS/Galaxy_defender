@@ -2,14 +2,21 @@ namespace Core.Ship.States
 {
     public class EscapeFromBattle : IShipState
     {
+        private readonly Ship _ship;
+
+        public EscapeFromBattle(Ship ship)
+        {
+            _ship = ship;
+        }
+        
         public void Enter()
         {
-            throw new System.NotImplementedException();
+            _ship.CompleteMission();
         }
 
         public void Exit()
         {
-            throw new System.NotImplementedException();
+           
         }
     }
 }

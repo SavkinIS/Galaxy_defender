@@ -20,7 +20,7 @@ namespace Core.Ship.States
                 {typeof(EndBattleRoundState), new EndBattleRoundState()},
                 {typeof(WaitingState), new WaitingState()},
                 {typeof(MoveToBattleFromWaitingZone), new MoveToBattleFromWaitingZone()},
-                {typeof(EscapeFromBattle), new EscapeFromBattle()},
+                {typeof(EscapeFromBattle), new EscapeFromBattle(ship)},
             };
             
             _currentState = _states[typeof(ParkingState)];

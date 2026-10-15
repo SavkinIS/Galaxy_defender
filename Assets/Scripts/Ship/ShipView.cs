@@ -32,4 +32,14 @@ public class ShipView : MonoBehaviour
     {
         _currentBullets.SetCount(_shipData.CurrentBullets);
     }
+
+    public void EnableCounter()
+    {
+        _currentBullets.Enable();
+    }
+
+    public void CompleteMission()
+    {
+        gameObject.SetActive(false);
+    }
 }
