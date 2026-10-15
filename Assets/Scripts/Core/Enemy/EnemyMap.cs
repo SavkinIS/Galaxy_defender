@@ -7,24 +7,98 @@ public class EnemyMap : MonoBehaviour
     [SerializeField] private List<Cell> _cells =  new List<Cell>();
     [SerializeField] private LevelDataSO _levelData;
 
-    private List<Cell> _activeCells = new List<Cell>();
-    
-    private Dictionary<(int x, int y), Cell> _cellMap = new();
-    
+    private struct CellLink
+    {
+        public Cell Cell;
+        public int ColorIndex;
+        public bool IsActive;
+        public int Left;
+        public int Right;
+        public int Down;
+        public int Up;
+    }
+
+    private CellLink[] _cellLinks;
+    private int[] _firstInRows;
+    private int[] _lastInRows;
+    private int[] _firstInColumns;
+    private int[] _lastInColumns;
+    private int _width;
+    private int _height;
+
     private void Awake()
     {
+        _width = _levelData.Width;
+        _height = _levelData.Height;
+        _cellLinks = new CellLink[_width * _height];
+
         for (var index = 0; index < _cells.Count; index++)
         {
             var cell = _cells[index];
             var data = _levelData.GetCell(cell.X, cell.Y);
-            
-            cell.SetColor(_levelData.GetColor(data.ColorIndex), data.HasColor);
-            
-            if (data.HasColor)
-            {
-                _activeCells.Add(cell);
 
-                _cellMap[(cell.X, cell.Y)] =  cell;
+            cell.SetColor(_levelData.GetColor(data.ColorIndex), data.HasColor);
+
+            if (!data.HasColor)
+                continue;
+
+            _cellLinks[cell.Y * _width + cell.X] = new CellLink
+            {
+                Cell = cell,
+                ColorIndex = data.ColorIndex,
+                IsActive = true,
+                Left = -1,
+                Right = -1,
+                Down = -1,
+                Up = -1
+            };
+        }
+
+        BuildLineIndex();
+    }
+
+    private void BuildLineIndex()
+    {
+        _firstInRows = new int[_height];
+        _lastInRows = new int[_height];
+        _firstInColumns = new int[_width];
+        _lastInColumns = new int[_width];
+
+        for (var x = 0; x < _width; x++)
+        {
+            _firstInColumns[x] = -1;
+            _lastInColumns[x] = -1;
+        }
+
+        for (var y = 0; y < _height; y++)
+        {
+            _firstInRows[y] = -1;
+            _lastInRows[y] = -1;
+
+            for (var x = 0; x < _width; x++)
+            {
+                var cellIndex = y * _width + x;
+
+                if (!_cellLinks[cellIndex].IsActive)
+                    continue;
+
+                var left = _lastInRows[y];
+                var down = _lastInColumns[x];
+                _cellLinks[cellIndex].Left = left;
+                _cellLinks[cellIndex].Down = down;
+
+                if (left >= 0)
+                    _cellLinks[left].Right = cellIndex;
+                else
+                    _firstInRows[y] = cellIndex;
+
+                if (down >= 0)
+                    _cellLinks[down].Up = cellIndex;
+                else
+                    _firstInColumns[x] = cellIndex;
+
+                _lastInRows[y] = cellIndex;
+                _lastInColumns[x] = cellIndex;
             }
         }
     }
@@ -45,35 +119,66 @@ public class EnemyMap : MonoBehaviour
     {
         targetCellIndex = (-1, -1);
 
-        if (direction.x == 0 && direction.y == 0)
+        if (startCellIndex.x < 0 || startCellIndex.x >= _width ||
+            startCellIndex.y < 0 || startCellIndex.y >= _height)
             return false;
 
-        var currentCellIndex = startCellIndex;
+        int cellIndex;
 
-        while (currentCellIndex.x >= 0 && currentCellIndex.x < _levelData.Width &&
-               currentCellIndex.y >= 0 && currentCellIndex.y < _levelData.Height)
-        {
-            if (_cellMap.TryGetValue(currentCellIndex, out var cell) && cell.IsActive)
-            {
-                if (_levelData.GetCell(currentCellIndex.x, currentCellIndex.y).ColorIndex != colorIndex)
-                    return false;
+        // Точки коннектора задают вход с границы, поэтому достаточно конца цепочки.
+        if (direction.x == 1 && direction.y == 0 && startCellIndex.x == 0)
+            cellIndex = _firstInRows[startCellIndex.y];
+        else if (direction.x == -1 && direction.y == 0 && startCellIndex.x == _width - 1)
+            cellIndex = _lastInRows[startCellIndex.y];
+        else if (direction.x == 0 && direction.y == 1 && startCellIndex.y == 0)
+            cellIndex = _firstInColumns[startCellIndex.x];
+        else if (direction.x == 0 && direction.y == -1 && startCellIndex.y == _height - 1)
+            cellIndex = _lastInColumns[startCellIndex.x];
+        else
+            return false;
 
-                targetCellIndex = currentCellIndex;
-                return true;
-            }
+        if (cellIndex < 0 || _cellLinks[cellIndex].ColorIndex != colorIndex)
+            return false;
 
-            currentCellIndex = (currentCellIndex.x + direction.x, currentCellIndex.y + direction.y);
-        }
-
-        return false;
+        targetCellIndex = (cellIndex % _width, cellIndex / _width);
+        return true;
     }
 
     public void DestroyCell((int x, int y) targetCellIndex)
     {
-        if (_cellMap.TryGetValue(targetCellIndex, out var cell))
-        {
-            if (cell.IsActive)
-                cell.Disable();
-        }
+        if (targetCellIndex.x < 0 || targetCellIndex.x >= _width ||
+            targetCellIndex.y < 0 || targetCellIndex.y >= _height)
+            return;
+
+        var cellIndex = targetCellIndex.y * _width + targetCellIndex.x;
+        var cell = _cellLinks[cellIndex];
+
+        if (!cell.IsActive)
+            return;
+
+        _cellLinks[cellIndex].IsActive = false;
+
+        if (cell.Left >= 0)
+            _cellLinks[cell.Left].Right = cell.Right;
+        else
+            _firstInRows[targetCellIndex.y] = cell.Right;
+
+        if (cell.Right >= 0)
+            _cellLinks[cell.Right].Left = cell.Left;
+        else
+            _lastInRows[targetCellIndex.y] = cell.Left;
+
+        if (cell.Down >= 0)
+            _cellLinks[cell.Down].Up = cell.Up;
+        else
+            _firstInColumns[targetCellIndex.x] = cell.Up;
+
+        if (cell.Up >= 0)
+            _cellLinks[cell.Up].Down = cell.Down;
+        else
+            _lastInColumns[targetCellIndex.x] = cell.Down;
+
+        // Обновляем индекс до Disable: OnDisable может запустить следующий запрос.
+        cell.Cell.Disable();
     }
 }

@@ -60,9 +60,6 @@ namespace Core.Ship
                 return false;
 
             Shoot();
-
-            Log.Info($"Shoot on {point}");
-
             return true;
         }
 

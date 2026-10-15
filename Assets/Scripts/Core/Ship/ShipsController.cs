@@ -16,12 +16,8 @@ namespace Core.Ship
 
         public bool TryShoot(PathPoint point, int colorIndex)
         {
-            var startCellIndex = _enemyCellConnector.GetCellIndex(point);
-
-            if (startCellIndex.x < 0 || startCellIndex.y < 0)
+            if (!_enemyCellConnector.TryGetLine(point, out var startCellIndex, out var direction))
                 return false;
-
-            var direction = _enemyCellConnector.GetSearchDirection(point);
 
             if (!_enemyMap.TryGetTargetCellIndex(startCellIndex, direction, colorIndex, out var targetCellIndex))
                 return false;
