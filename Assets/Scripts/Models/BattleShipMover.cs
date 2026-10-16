@@ -8,6 +8,8 @@ public class BattleShipMover : MonoBehaviour
     [SerializeField] Path _path;
 
     private Dictionary<Transform, Coroutine> _movementCoroutine = new ();
+
+    public IReadOnlyList<PathPoint> Points => _path.Points;
     
     public void Move(
         Transform ship,

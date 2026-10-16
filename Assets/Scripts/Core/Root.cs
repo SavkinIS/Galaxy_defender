@@ -1,5 +1,5 @@
-using System;
 using Core.Ship;
+using Core.Waiting;
 using UnityEngine;
 
 namespace Core
@@ -12,12 +12,25 @@ namespace Core
         [SerializeField] private ShipParkingMover _shipParkingMover;
         [SerializeField] private BattleShipMover _battleShipMover;
         [SerializeField] private EnemyCellConnector _enemyCellConnector;
-        
+        [SerializeField] private WaitingZonesHandler _waitingZones;
+        [SerializeField] private UnityEngine.Events.UnityEvent _onWaitingZoneOverflow = new UnityEngine.Events.UnityEvent();
+
         private ShipsController _shipsController;
+        private GameSessionHandler _gameSessionHandler;
+        private WaitingZonesController _waitingZonesController;
 
         private void Awake()
         {
-            _shipsController = new ShipsController(_puzzle, _shipParkingMover, _battleShipMover, _enemyMap, _enemyCellConnector);
+            _gameSessionHandler = new GameSessionHandler();
+            _waitingZonesController = new WaitingZonesController(
+                _waitingZones.Zones, _gameSessionHandler);
+            _shipsController = new ShipsController(_puzzle, _shipParkingMover, _battleShipMover,
+                _enemyMap, _enemyCellConnector, _waitingZonesController, _gameSessionHandler);
+        }
+
+        private void OnWaitingZoneOverflow()
+        {
+            _onWaitingZoneOverflow.Invoke();
         }
 
         private void Start()
@@ -27,22 +40,24 @@ namespace Core
 
         private void OnEnable()
         {
-            Subscibe();
+            Subscribe();
         }
 
         private void OnDisable()
         {
-            UnSubscibe();
+            UnSubscribe();
         }
 
-        private void UnSubscibe()
+        private void UnSubscribe()
         {
             _playerInput.MouseClicked -= _shipsController.MouseClicked;
+            _gameSessionHandler.WaitingZoneOverflow -= OnWaitingZoneOverflow;
         }
 
-        private void Subscibe()
+        private void Subscribe()
         {
             _playerInput.MouseClicked += _shipsController.MouseClicked;
+            _gameSessionHandler.WaitingZoneOverflow += OnWaitingZoneOverflow;
         }
     }
 }

@@ -11,6 +11,13 @@ namespace Core.Ship
             _enemyCellConnector = enemyCellConnector;
         }
 
+        public bool CanShoot(PathPoint point, int colorIndex)
+        {
+            return point != null &&
+                   _enemyCellConnector.TryGetLine(point, out var startCellIndex, out var direction) &&
+                   _enemyMap.TryGetTargetCellIndex(startCellIndex, direction, colorIndex, out _);
+        }
+
         public bool TryShoot(PathPoint point, int colorIndex)
         {
             if (!_enemyCellConnector.TryGetLine(point, out var startCellIndex, out var direction))

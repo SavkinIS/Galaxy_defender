@@ -13,20 +13,21 @@ namespace Core.Ship
         private readonly Action<RimPlacement, int> _releaseParkingCells;
         private readonly ShipShooterProvider _shootProvider;
         private bool _isOnParking;
-        private readonly Action<Ship> _onShipCompleted;
+        private readonly IShipsController _shipsController;
 
         public Ship(ShipData shipData, ShipView view, ShipParkingMover shipParkingMover,
             Action<RimPlacement, int> releaseParkingCells, BattleShipMover shipBattleMover,
-            ShipShooterProvider shootProvider, Action<Ship> onShipCompleted)
+            ShipShooterProvider shootProvider, IShipsController shipsController)
         {
             _shipData = shipData;
             _view =  view;
             _shipParkingMover  = shipParkingMover;
             _releaseParkingCells = releaseParkingCells;
             _shootProvider =  shootProvider;
-            _onShipCompleted = onShipCompleted;
-            
-            _stateMachine = new ShipStateMachine(_shipParkingMover, this, shipBattleMover);
+            _shipsController = shipsController;
+
+            _stateMachine = new ShipStateMachine(_shipParkingMover, this, shipBattleMover,
+                shipsController);
             _isOnParking = true;
         }
         
@@ -43,7 +44,7 @@ namespace Core.Ship
         {
             _view.CompleteMission();
             _stateMachine.Dispose();
-            _onShipCompleted?.Invoke(this);
+            _shipsController.OnShipCompleted(this);
         }
 
         public void ReleaseParkingCells()
@@ -62,6 +63,51 @@ namespace Core.Ship
         public void ParkingEscaped()
         {
             _stateMachine.ChangeState(typeof(BattleState));
+        }
+
+        public bool CanShoot(PathPoint point)
+        {
+            return IsNoEmpty && _shootProvider.CanShoot(point, _shipData.ColorIndex);
+        }
+
+        public void MoveToWaitingZone(Transform target, Action onComplete)
+        {
+            _view.MoveToWaitingZone(target, onComplete);
+        }
+
+        public void StopWaitingMovement()
+        {
+            _view.StopWaitingMovement();
+        }
+
+        public void WaitingArrived()
+        {
+            _stateMachine.ChangeState(typeof(WaitingState));
+        }
+
+        public void StartWaitingRoutine(System.Collections.IEnumerator routine)
+        {
+            _view.StartWaitingRoutine(routine);
+        }
+
+        public void StopWaitingRoutine()
+        {
+            _view.StopWaitingRoutine();
+        }
+
+        public void ReturnToBattle()
+        {
+            _stateMachine.ChangeState(typeof(MoveToBattleFromWaitingZone));
+        }
+
+        public void MoveToBattle(Transform target, Action onComplete)
+        {
+            _view.MoveToBattle(target, onComplete);
+        }
+
+        public void StopBattleMovement()
+        {
+            _view.StopBattleMovement();
         }
 
         public bool TryShoot(PathPoint point)

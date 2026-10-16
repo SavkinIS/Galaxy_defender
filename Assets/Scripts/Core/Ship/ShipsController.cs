@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using Core.Waiting;
 using UnityEngine;
 
 namespace Core.Ship
 {
-    public class ShipsController
+    public class ShipsController : IShipsController
     {
         private const int ShipsInBattle = 5;
         
@@ -14,16 +15,22 @@ namespace Core.Ship
         private readonly EnemyMap _enemyMap;
         private readonly EnemyCellConnector _enemyCellConnector;
         private readonly ShipShooterProvider _shootProvider;
+        private readonly IWaitingZonesController _waitingZones;
+        private readonly IGameSessionHandler _gameSession;
 
         private List<Ship> _activeShips =  new List<Ship>();
-        
-        public ShipsController(ShipsPuzzle shipsPuzzle, ShipParkingMover shipParkingMover,  BattleShipMover shipBattleMover, EnemyMap enemyMap, EnemyCellConnector enemyCellConnector)
+
+        public ShipsController(ShipsPuzzle shipsPuzzle, ShipParkingMover shipParkingMover,
+            BattleShipMover shipBattleMover, EnemyMap enemyMap, EnemyCellConnector enemyCellConnector,
+            IWaitingZonesController waitingZones, IGameSessionHandler gameSession)
         {
             _shipsPuzzle = shipsPuzzle;
             _shipParkingMover =  shipParkingMover;
             _shipBattleMover = shipBattleMover;
             _enemyMap = enemyMap;
             _enemyCellConnector = enemyCellConnector;
+            _waitingZones = waitingZones;
+            _gameSession = gameSession;
 
             _shootProvider = new ShipShooterProvider(_enemyMap, _enemyCellConnector);
         }
@@ -45,14 +52,14 @@ namespace Core.Ship
                         createdShip.Key,
                         createdShip.Value,
                         _shipParkingMover,
-                        _shipsPuzzle.ReleaseShipCells, 
-                        _shipBattleMover, _shootProvider, OnShipCompleted);
+                        _shipsPuzzle.ReleaseShipCells,
+                        _shipBattleMover, _shootProvider, this);
             }
         }
 
         public void MouseClicked(Vector2 screenPosition)
         {
-            if (_activeShips.Count == ShipsInBattle)
+            if (!_gameSession.IsRunning || _activeShips.Count >= ShipsInBattle)
                 return;
             
             if (RaycastLaunch.TryGetClickedObject<ShipView>(screenPosition, out var hitObject))
@@ -61,21 +68,61 @@ namespace Core.Ship
                 {
                     if (_ships.TryGetValue(shipView, out var ship))
                     {
-                        if (ship != null && ship.IsOnParking && CanLeaveParking(ship))
+                        if (ship != null && ship.IsOnParking && CanLeaveParking(ship)
+                            && TryEnterBattle(ship))
                         {
                             ship.EscapeParking();
-                            _activeShips.Add(ship);
                         }
                     }
                 }
             } 
         }
 
-        private void OnShipCompleted(Ship ship)
+        public bool TryEnterBattle(Ship ship)
+        {
+            if (!_gameSession.IsRunning)
+                return false;
+
+            if (_activeShips.Contains(ship))
+                return true;
+
+            if (_activeShips.Count >= ShipsInBattle)
+                return false;
+
+            _activeShips.Add(ship);
+            _waitingZones.ReleaseShip(ship.Transform);
+            return true;
+        }
+
+        public bool HasFreeBattleSlot => _gameSession.IsRunning && _activeShips.Count < ShipsInBattle;
+
+        public void ReleaseBattleSlot(Ship ship)
         {
             _activeShips.Remove(ship);
         }
-        
+
+        public bool TryReserveWaitingZone(Ship ship, out Transform target)
+        {
+            return _waitingZones.TryReserve(ship.Transform, out target);
+        }
+
+        public void ReleaseWaitingReservation(Ship ship)
+        {
+            _waitingZones.ReleaseShip(ship.Transform);
+        }
+
+        public void OnShipCompleted(Ship ship)
+        {
+            _waitingZones.ReleaseShip(ship.Transform);
+            _activeShips.Remove(ship);
+        }
+
+        public void OnShipWaiting(Ship ship)
+        {
+            _waitingZones.PlaceShip(ship.Transform);
+            _activeShips.Remove(ship);
+        }
+
         private bool CanLeaveParking(Ship ship)
         {
             return _shipsPuzzle.HasClearExit(ship.Placement);
