@@ -10,17 +10,30 @@ namespace Core.Waiting
         private readonly Dictionary<Transform, WaitingZone> _reservations =
             new Dictionary<Transform, WaitingZone>();
 
+        public int Capacity => _zones.Length;
+
         public WaitingZonesController(IReadOnlyList<WaitingZoneView> zoneViews,
-            IGameSessionHandler gameSession)
+            IGameSessionHandler gameSession, int requestedSlots = SlotRange.MaximumAllowedSlots)
         {
             _gameSession = gameSession;
-            _zones = new WaitingZone[zoneViews?.Count ?? 0];
-
-            for (var index = 0; index < _zones.Length; index++)
+            var zones = new List<WaitingZone>();
+            var addedViews = new HashSet<WaitingZoneView>();
+            int limit = Mathf.Clamp(requestedSlots, 0, SlotRange.MaximumAllowedSlots);
+            if (zoneViews != null)
             {
-                if (zoneViews[index] != null)
-                    _zones[index] = new WaitingZone(zoneViews[index]);
+                for (int index = 0; index < zoneViews.Count; index++)
+                {
+                    WaitingZoneView view = zoneViews[index];
+                    if (view == null || !addedViews.Add(view))
+                        continue;
+
+                    bool available = view.ShipPosition != null && zones.Count < limit;
+                    view.gameObject.SetActive(available);
+                    if (available)
+                        zones.Add(new WaitingZone(view));
+                }
             }
+            _zones = zones.ToArray();
         }
 
         public bool TryReserve(Transform ship, out Transform target)

@@ -15,14 +15,33 @@ public class ShipsPuzzle : MonoBehaviour
     private Dictionary<int, ShipView> _shipsById;
     private List<ShipData> _launchTape;
     private int _nextIndex;
-    
+    private int _availableWaitingSlots = -1;
+    private IReadOnlyList<PathPoint> _battlePoints;
+    private EnemyCellConnector _connector;
+    private PuzzleGenerationSettingsSO _runtimeSettings;
+
+    private PuzzleGenerationSettingsSO GenerationSettings => _generationSettings != null
+        ? _generationSettings
+        : _runtimeSettings ?? (_runtimeSettings = PuzzleGenerationSettingsSO.CreateRuntimeDefault());
+
     public List<ShipData> LaunchTape  => _launchTape;
     public Dictionary<ShipData, ShipView> CreatedShips => _parkingGrid.CreatedShips;
+    public int RequestedWaitingSlots => GenerationSettings.ResolvedWaitingSlots;
+
+    public void ConfigureGeneration(int availableWaitingSlots,
+        IReadOnlyList<PathPoint> battlePoints, EnemyCellConnector connector)
+    {
+        _availableWaitingSlots = Mathf.Max(0, availableWaitingSlots);
+        _battlePoints = battlePoints;
+        _connector = connector;
+    }
     
     public void Initialize()
     {
         Log.Enabled = _debugLogs;
-        _parkingCreator.Configure(_generationSettings);
+        _parkingCreator.Configure(GenerationSettings);
+        if (_availableWaitingSlots >= 0 && _availableWaitingSlots < RequestedWaitingSlots)
+            Log.Warn($"Профиль запрашивает {RequestedWaitingSlots} мест ожидания, доступно {_availableWaitingSlots}. Генерация использует фактический лимит.");
 
         _shipsById = new Dictionary<int, ShipView>
         {
@@ -34,7 +53,10 @@ public class ShipsPuzzle : MonoBehaviour
         var solver = new GuaranteedLaunchTapeSolver(
             _parkingCreator,
             _parkingGrid,
-            _generationSettings);
+            GenerationSettings,
+            _availableWaitingSlots,
+            _battlePoints,
+            _connector);
         _launchTape = solver.Build(_levelData);
 
         if (_launchTape == null || _launchTape.Count == 0)

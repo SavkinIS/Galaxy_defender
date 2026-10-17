@@ -3,15 +3,16 @@ using UnityEngine;
 
 public sealed class GuaranteedLaunchTapeSolver
 {
-    private const int SingleLayerCount = 1;
-    private const int MinColorAttempts = 1;
     private const int NoRemainingBlocks = 0;
+    private const int MaxVisitedStates = 5000;
 
     private readonly ShipParkingCreator _parkingCreator;
     private readonly ParkingGrid _parkingGrid;
     private readonly PuzzleGenerationSettingsSO _settings;
     private readonly PuzzleDifficulty _difficulty;
     private readonly int _waitSlots;
+    private readonly IReadOnlyList<PathPoint> _battlePoints;
+    private readonly EnemyCellConnector _connector;
     private readonly HashSet<string> _failedStates = new HashSet<string>();
     private int _visitedStates;
 
@@ -21,7 +22,10 @@ public sealed class GuaranteedLaunchTapeSolver
     public GuaranteedLaunchTapeSolver(
         ShipParkingCreator parkingCreator,
         ParkingGrid parkingGrid,
-        PuzzleGenerationSettingsSO settings)
+        PuzzleGenerationSettingsSO settings,
+        int availableWaitingSlots = -1,
+        IReadOnlyList<PathPoint> battlePoints = null,
+        EnemyCellConnector connector = null)
     {
         _parkingCreator = parkingCreator;
         _parkingGrid = parkingGrid;
@@ -29,17 +33,18 @@ public sealed class GuaranteedLaunchTapeSolver
             ? settings
             : PuzzleGenerationSettingsSO.CreateRuntimeDefault();
         _difficulty = _settings.Difficulty;
-        _waitSlots = _settings.ResolvedWaitingSlots;
+        _waitSlots = availableWaitingSlots < 0
+            ? _settings.ResolvedWaitingSlots
+            : Mathf.Min(availableWaitingSlots, _settings.ResolvedWaitingSlots);
+        _battlePoints = battlePoints;
+        _connector = connector;
     }
 
     public List<ShipData> Build(LevelDataSO level)
     {
-        EnemyBoard board = EnemyBoard.FromLevel(level);
+        EnemyBoard board = EnemyBoard.FromLevel(level, _battlePoints, _connector);
         if (board.RemainingTotal == NoRemainingBlocks)
             return new List<ShipData>();
-
-        if (board.Layers == SingleLayerCount)
-            return BuildSingleLayer(level, board);
 
         _failedStates.Clear();
         _visitedStates = 0;
@@ -59,67 +64,15 @@ public sealed class GuaranteedLaunchTapeSolver
         return null;
     }
 
-    private List<ShipData> BuildSingleLayer(LevelDataSO level, EnemyBoard board)
-    {
-        List<int> colors = OrderColors(board.GetExposedColors(), board);
-        List<int> sizes = _parkingCreator.GetSizePriority(_difficulty);
-
-        int attemptCount = Mathf.Max(MinColorAttempts, colors.Count);
-        
-        for (int shift = 0; shift < attemptCount; shift++)
-        {
-            var orderedColors = new List<int>(colors.Count);
-            for (int i = 0; i < colors.Count; i++)
-                orderedColors.Add(colors[(i + shift) % colors.Count]);
-
-            var tape = new List<ShipData>();
-            for (int i = 0; i < orderedColors.Count; i++)
-            {
-                int color = orderedColors[i];
-                int remaining = board.RemainingCount(color);
-
-                while (remaining > 0)
-                {
-                    int size = sizes[0];
-                    for (int sizeIndex = 0; sizeIndex < sizes.Count; sizeIndex++)
-                    {
-                        int candidate = sizes[sizeIndex];
-                        if (_parkingCreator.GetAmmoForSize(candidate) > 0)
-                        {
-                            size = candidate;
-                            break;
-                        }
-                    }
-
-                    int ammo = Mathf.Min(_parkingCreator.GetAmmoForSize(size), remaining);
-                    if (ammo <= 0)
-                        break;
-
-                    tape.Add(new ShipData(size, ammo, ammo, level.GetColor(color), color));
-                    remaining -= ammo;
-                }
-            }
-
-            if (_parkingGrid == null || _parkingGrid.CanPlaceTapeReverse(tape))
-            {
-                for (int i = 0; i < tape.Count; i++)
-                    tape[i].ResetAmmo();
-
-                Log.Info($"Однослойная лента готова: кораблей={tape.Count}, слотов={_waitSlots}, попытка={shift + MinColorAttempts}");
-                return tape;
-            }
-        }
-
-        Log.Error("Однослойную ленту не удалось разместить на парковке.");
-        return null;
-    }
-
     private bool Search(
         LevelDataSO level,
         EnemyBoard board,
         List<ShipData> waiting,
         List<ShipData> tape)
     {
+        if (_visitedStates >= MaxVisitedStates || !HasParkingCapacity(board, waiting, tape))
+            return false;
+
         _visitedStates++;
         if (board.RemainingTotal == 0)
         {
@@ -151,53 +104,50 @@ public sealed class GuaranteedLaunchTapeSolver
             if (nextShip.HasBullets == false)
                 nextWaiting.RemoveAt(i);
 
-            if (Search(level, nextBoard, nextWaiting, new List<ShipData>(tape)))
+            if (Search(level, nextBoard, nextWaiting, tape))
                 return true;
         }
 
-        List<int> colors = OrderColors(board.GetExposedColors(), board);
+        List<int> colors = OrderColors(board.GetExposedColors(), board, waiting.Count);
         for (int colorIndex = 0; colorIndex < colors.Count; colorIndex++)
         {
             int color = colors[colorIndex];
             int remaining = board.RemainingCount(color);
-            int exposed = board.ExposedCount(color);
-            List<int> sizes = _parkingCreator.GetSizePriority(_difficulty);
-
-            for (int sizeIndex = 0; sizeIndex < sizes.Count; sizeIndex++)
+            for (int index = 0; index < waiting.Count; index++)
             {
-                int size = sizes[sizeIndex];
+                if (waiting[index].ColorIndex == color)
+                    remaining -= waiting[index].CurrentBullets;
+            }
+            if (remaining <= 0)
+                continue;
+
+            var triedAmmo = new HashSet<int>();
+            foreach (int size in _parkingCreator.GetSizePriority(_difficulty))
+            {
                 int ammo = Mathf.Min(_parkingCreator.GetAmmoForSize(size), remaining);
-                if (ammo <= 0 || (ammo > exposed && waiting.Count >= _waitSlots))
-                    continue;
-
-                EnemyBoard nextBoard = board.Clone();
-                ShipData nextShip = new ShipData(size, ammo, ammo, level.GetColor(color), color);
-                Fire(nextShip, nextBoard);
-
-                var nextWaiting = CloneShips(waiting);
-                if (nextShip.HasBullets)
-                    nextWaiting.Add(nextShip);
-
-                if (nextWaiting.Count > _waitSlots)
-                    continue;
-
-                var nextTape = new List<ShipData>(tape) { nextShip };
-                if (Search(level, nextBoard, nextWaiting, nextTape))
+                if (triedAmmo.Add(ammo) && TryLaunch(level, board, waiting, tape, color, ammo))
                     return true;
             }
+
+            // При заполненном ожидании допускается неполный корабль, который достреляет сразу.
+            int exposedAmmo = Mathf.Min(board.ExposedCount(color), remaining);
+            if (triedAmmo.Add(exposedAmmo) &&
+                TryLaunch(level, board, waiting, tape, color, exposedAmmo))
+                return true;
         }
 
         _failedStates.Add(stateKey);
         return false;
     }
 
-    private List<int> OrderColors(List<int> colors, EnemyBoard board)
+    private List<int> OrderColors(List<int> colors, EnemyBoard board, int waitingCount)
     {
+        bool prioritizeProgress = IsLowDifficulty(_difficulty) || waitingCount >= Mathf.Max(0, _waitSlots - 1);
         colors.Sort((left, right) =>
         {
             int leftCount = board.ExposedCount(left);
             int rightCount = board.ExposedCount(right);
-            int comparison = IsLowDifficulty(_difficulty)
+            int comparison = prioritizeProgress
                 ? rightCount.CompareTo(leftCount)
                 : leftCount.CompareTo(rightCount);
             return comparison != 0 ? comparison : left.CompareTo(right);
@@ -213,9 +163,65 @@ public sealed class GuaranteedLaunchTapeSolver
 
     private static void Fire(ShipData ship, EnemyBoard board)
     {
-        int shot = Mathf.Min(ship.CurrentBullets, board.ExposedCount(ship.ColorIndex));
-        board.RemoveExposed(ship.ColorIndex, shot);
+        int shot = board.RemoveExposed(ship.ColorIndex, ship.CurrentBullets);
         ship.Spend(shot);
+    }
+
+    private bool TryLaunch(LevelDataSO level, EnemyBoard board, List<ShipData> waiting,
+        List<ShipData> tape, int color, int ammo)
+    {
+        if (ammo <= 0)
+            return false;
+
+        int size = _parkingCreator.FindShipSize(ammo);
+        if (ammo > _parkingCreator.GetAmmoForSize(size))
+            return false;
+
+        var nextShip = new ShipData(size, ammo, ammo, level.GetColor(color), color);
+        EnemyBoard nextBoard = board.Clone();
+        Fire(nextShip, nextBoard);
+        if (nextShip.HasBullets && waiting.Count >= _waitSlots)
+            return false;
+
+        var nextWaiting = CloneShips(waiting);
+        if (nextShip.HasBullets)
+            nextWaiting.Add(nextShip);
+
+        tape.Add(nextShip);
+        if (Search(level, nextBoard, nextWaiting, tape))
+            return true;
+
+        tape.RemoveAt(tape.Count - 1);
+        return false;
+    }
+
+    private bool HasParkingCapacity(EnemyBoard board, List<ShipData> waiting, List<ShipData> tape)
+    {
+        if (_parkingGrid == null)
+            return true;
+
+        int occupied = 0;
+        for (int index = 0; index < tape.Count; index++)
+            occupied += tape[index].Size;
+
+        int unassigned = board.RemainingTotal;
+        for (int index = 0; index < waiting.Count; index++)
+            unassigned -= waiting[index].CurrentBullets;
+
+        int bestAmmo = 0;
+        int bestSize = 1;
+        foreach (int size in _parkingCreator.GetSizePriority(_difficulty))
+        {
+            int ammo = _parkingCreator.GetAmmoForSize(size);
+            if ((long)ammo * bestSize > (long)bestAmmo * size)
+            {
+                bestAmmo = ammo;
+                bestSize = size;
+            }
+        }
+
+        long requiredCells = ((long)Mathf.Max(0, unassigned) * bestSize + bestAmmo - 1) / bestAmmo;
+        return occupied + requiredCells <= _parkingGrid.Capacity;
     }
 
     private static ShipData CloneShip(ShipData source)

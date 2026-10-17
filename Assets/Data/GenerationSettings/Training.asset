@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8a6e051eacbc54286b62b3aa6020c51a, type: 3}
-  m_Name: Normal 1
+  m_Name: Training
   m_EditorClassIdentifier: 
-  _difficulty: 5
+  _difficulty: 1
   _waitingSlots:
-    _minimum: 5
-    _maximum: 5
+    _minimum: 4
+    _maximum: 7
   _smallShipSize: 1
   _mediumShipSize: 2
   _largeShipSize: 3

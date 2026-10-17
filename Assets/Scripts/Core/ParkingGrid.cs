@@ -24,6 +24,7 @@ public class ParkingGrid : MonoBehaviour
     private Dictionary<(int x, int y), ParkingCell> _cellsViewMap;
 
     public Dictionary<ShipData, ShipView> CreatedShips => _createdShips;
+    public int Capacity => _sizeX * _sizeY;
     
     private void Awake()
     {
@@ -97,56 +98,115 @@ public class ParkingGrid : MonoBehaviour
 
     public bool TryPlaceTapeReverse(IReadOnlyList<ShipData> tape, System.Func<int, ShipView> prefabBySize)
     {
-        _createdShips =  new ();
-        
         EnsureInitialized();
-        ClearOccupancy();
+        if (tape == null || prefabBySize == null || _cellsViewMap == null)
+            return false;
 
-        Log.Info($"Укладка с конца: кораблей={tape.Count}, сетка={_sizeX}x{_sizeY}, шаг={GetGridAxisX().magnitude:0.00}");
-
-        for (int i = tape.Count - 1; i >= 0; i--)
+        var prefabs = new ShipView[tape.Count];
+        var uniqueShips = new HashSet<ShipData>();
+        for (int i = 0; i < tape.Count; i++)
         {
             ShipData data = tape[i];
-            ShipView prefab = prefabBySize(data.Size);
-
-            Log.Info($"Кладу S{i + 1}/{tape.Count} size={data.Size} цвет={data.ColorIndex} ammo={data.MaxBullets}");
-
-            if (prefab == null || TryPlaceOnRim(data, prefab, i) == false)
-            {
-                Log.Error($"Не удалось уложить S{i + 1} size={data.Size}");
-                Log.Info(BuildOccupancyMap());
+            if (uniqueShips.Add(data) == false)
                 return false;
-            }
+
+            prefabs[i] = prefabBySize(data.Size);
+            if (prefabs[i] == null)
+                return false;
         }
 
-        Log.Info("Итоговая стоянка:\n" + BuildOccupancyMap());
-        LogVisualOverlaps();
-        return true;
+        if (CanPlaceTapeReverse(tape) == false)
+            return false;
+
+        ClearCreatedShips();
+        bool completed = false;
+        try
+        {
+            ClearOccupancy();
+            Log.Info($"Укладка с конца: кораблей={tape.Count}, сетка={_sizeX}x{_sizeY}, шаг={GetGridAxisX().magnitude:0.00}");
+
+            for (int i = tape.Count - 1; i >= 0; i--)
+            {
+                ShipData data = tape[i];
+                Log.Info($"Кладу S{i + 1}/{tape.Count} size={data.Size} цвет={data.ColorIndex} ammo={data.MaxBullets}");
+
+                if (TryPlaceOnRim(data, prefabs[i], i) == false)
+                {
+                    Log.Error($"Не удалось уложить S{i + 1} size={data.Size}");
+                    Log.Info(BuildOccupancyMap());
+                    return false;
+                }
+            }
+
+            Log.Info("Итоговая стоянка:\n" + BuildOccupancyMap());
+            LogVisualOverlaps();
+            completed = true;
+            return true;
+        }
+        catch (System.Exception exception)
+        {
+            Log.Error($"Ошибка укладки кораблей: {exception}");
+            return false;
+        }
+        finally
+        {
+            if (completed == false)
+            {
+                ClearCreatedShips();
+                ClearOccupancy();
+            }
+        }
+    }
+
+    private void ClearCreatedShips()
+    {
+        if (_createdShips == null)
+        {
+            _createdShips = new Dictionary<ShipData, ShipView>();
+            return;
+        }
+
+        foreach (ShipView ship in _createdShips.Values)
+        {
+            if (ship == null)
+                continue;
+
+            ship.gameObject.SetActive(false);
+            if (Application.isPlaying)
+                Destroy(ship.gameObject);
+            else
+                DestroyImmediate(ship.gameObject);
+        }
+
+        _createdShips.Clear();
     }
 
     public bool CanPlaceTapeReverse(IReadOnlyList<ShipData> tape)
     {
+        if (tape == null)
+            return false;
+
         EnsureInitialized();
         bool[,] snapshot = CopyOccupancy();
-        ClearOccupancy();
-
-        for (int i = tape.Count - 1; i >= 0; i--)
+        try
         {
-            ShipData data = tape[i];
-            int size = Mathf.Max(1, data.Size);
-            if (TryFindRimPlacement(size, true, true, out RimPlacement placement) == false &&
-                TryFindRimPlacement(size, false, true, out placement) == false &&
-                TryFindRimPlacement(size, false, false, out placement) == false)
+            ClearLogicalOccupancy();
+            for (int i = tape.Count - 1; i >= 0; i--)
             {
-                RestoreOccupancy(snapshot);
-                return false;
+                ShipData data = tape[i];
+                int size = Mathf.Max(1, data.Size);
+                if (TryFindSafePlacement(size, out RimPlacement placement) == false)
+                    return false;
+
+                OccupyFromNose(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
             }
 
-            OccupyFromNose(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
+            return true;
         }
-
-        RestoreOccupancy(snapshot);
-        return true;
+        finally
+        {
+            RestoreOccupancy(snapshot);
+        }
     }
 
     public bool HasClearedExit(RimPlacement placement)
@@ -205,10 +265,8 @@ public class ParkingGrid : MonoBehaviour
         }
     }
 
-    public void ClearOccupancy()
+    private void ClearLogicalOccupancy()
     {
-        EnsureInitialized();
-
         for (int x = 0; x < _sizeX; x++)
         {
             for (int y = 0; y < _sizeY; y++)
@@ -216,12 +274,21 @@ public class ParkingGrid : MonoBehaviour
         }
 
         _hasOccupiedCells = false;
+    }
+
+    public void ClearOccupancy()
+    {
+        EnsureInitialized();
+        ClearLogicalOccupancy();
 
         if (_cellsViewMap == null)
             return;
 
         foreach (var pair in _cellsViewMap)
-            pair.Value.SetOccupied(false);
+        {
+            if (pair.Value != null)
+                pair.Value.SetOccupied(false);
+        }
     }
 
     public void ReleaseOccupiedCells(int frontX, int frontY, int dx, int dy, int size)
@@ -293,23 +360,8 @@ public class ParkingGrid : MonoBehaviour
     {
         int size = Mathf.Max(1, shipData.Size);
 
-        bool withExit = TryFindRimPlacement(size, true, true, out RimPlacement placement);
-        Log.Info($"  кандидаты с выездом и склейкой: {(withExit ? $"score={placement.Score} glue={placement.Glue} nose=({placement.FrontX},{placement.FrontY}) dir=({placement.Dx},{placement.Dy})" : "нет")}");
-
-        if (withExit == false)
-        {
-            bool glued = TryFindRimPlacement(size, false, true, out placement);
-            Log.Warn($"  без чистого выезда: {(glued ? $"score={placement.Score} glue={placement.Glue} nose=({placement.FrontX},{placement.FrontY})" : "нет")}");
-            withExit = glued;
-        }
-
-        if (withExit == false)
-        {
-            bool any = TryFindRimPlacement(size, false, false, out placement);
-            Log.Warn($"  без склейки (дыра): {(any ? $"score={placement.Score} nose=({placement.FrontX},{placement.FrontY})" : "нет")}");
-            if (any == false)
-                return false;
-        }
+        if (shipPrefab == null || TryFindSafePlacement(size, out RimPlacement placement) == false)
+            return false;
 
         if (_cellsViewMap == null || _cellsViewMap.ContainsKey((placement.FrontX, placement.FrontY)) == false)
         {
@@ -317,16 +369,16 @@ public class ParkingGrid : MonoBehaviour
             return false;
         }
 
-        OccupyFromNose(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
-        DisableOccupiedCells(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
-
+        _createdShips ??= new Dictionary<ShipData, ShipView>();
         ShipView ship = SpawnShipView(shipData, shipPrefab, placement.FrontX, placement.FrontY, (placement.Dx, placement.Dy));
         if (ship == null)
             return false;
-        
-        ship.SetPlacement(placement);
 
         _createdShips[shipData] = ship;
+        ship.SetPlacement(placement);
+
+        OccupyFromNose(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
+        DisableOccupiedCells(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size);
         
         TryWorldToCell(ship.transform.position, out int shipCellX, out int shipCellY);
 
@@ -338,6 +390,12 @@ public class ParkingGrid : MonoBehaviour
             $"  позиция корабля world={ship.transform.position} в клетках=({shipCellX},{shipCellY})");
         Log.Info("  карта:\n" + BuildOccupancyMap(placement.FrontX, placement.FrontY, placement.Dx, placement.Dy, size));
         return true;
+    }
+
+    private bool TryFindSafePlacement(int size, out RimPlacement placement)
+    {
+        return TryFindRimPlacement(size, true, true, out placement) ||
+               TryFindRimPlacement(size, true, false, out placement);
     }
 
     private bool TryFindRimPlacement(int size, bool requireClearExit, bool requireGlue, out RimPlacement result)
@@ -407,6 +465,10 @@ public class ParkingGrid : MonoBehaviour
             int x = frontX - dx * i;
             int y = frontY - dy * i;
             if (IsCellFree(x, y) == false)
+                return false;
+
+            if (_cellsViewMap != null &&
+                (_cellsViewMap.TryGetValue((x, y), out ParkingCell cell) == false || cell == null))
                 return false;
         }
 
@@ -788,12 +850,28 @@ public class ParkingGrid : MonoBehaviour
 
         Transform parent = _conteiner != null ? _conteiner : transform;
         ShipView shipInstance = Instantiate(shipPrefab, frontPos, rotation, parent);
-        shipInstance.SetData(shipData);
-        shipInstance.transform.localScale = Vector3.one * 2.5f;
+        try
+        {
+            shipInstance.SetData(shipData);
+            shipInstance.transform.localScale = Vector3.one * 2.5f;
 
-        Log.Info(
-            $"  спавн noseCell=({frontX},{frontY}) dir=({facing.x},{facing.y}) forward={forward} euler={shipInstance.transform.eulerAngles}");
-        return shipInstance;
+            Log.Info(
+                $"  спавн noseCell=({frontX},{frontY}) dir=({facing.x},{facing.y}) forward={forward} euler={shipInstance.transform.eulerAngles}");
+            return shipInstance;
+        }
+        catch
+        {
+            if (shipInstance != null)
+            {
+                shipInstance.gameObject.SetActive(false);
+                if (Application.isPlaying)
+                    Destroy(shipInstance.gameObject);
+                else
+                    DestroyImmediate(shipInstance.gameObject);
+            }
+
+            throw;
+        }
     }
 
     private Vector3 GetFacingWorldAxis((int x, int y) facing)

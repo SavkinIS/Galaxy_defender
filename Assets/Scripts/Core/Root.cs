@@ -23,7 +23,9 @@ namespace Core
         {
             _gameSessionHandler = new GameSessionHandler();
             _waitingZonesController = new WaitingZonesController(
-                _waitingZones.Zones, _gameSessionHandler);
+                _waitingZones.Zones, _gameSessionHandler, _puzzle.RequestedWaitingSlots);
+            _puzzle.ConfigureGeneration(_waitingZonesController.Capacity,
+                _battleShipMover.Points, _enemyCellConnector);
             _shipsController = new ShipsController(_puzzle, _shipParkingMover, _battleShipMover,
                 _enemyMap, _enemyCellConnector, _waitingZonesController, _gameSessionHandler);
         }

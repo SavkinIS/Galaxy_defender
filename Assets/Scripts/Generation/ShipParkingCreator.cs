@@ -124,15 +124,17 @@ public class ShipParkingCreator : MonoBehaviour
         return sizePriority[sizePriority.Count - 1];
     }
 
-    private int FindShipSize(int bullets)
+    public int FindShipSize(int bullets)
     {
-        foreach (var size in _bulletsBySize)
+        EnsureAmmoTable();
+        int bestSize = int.MaxValue;
+        foreach (var ship in _bulletsBySize)
         {
-            if (size.Value >= bullets)
-                return size.Key;
+            if (ship.Value >= bullets && ship.Key < bestSize)
+                bestSize = ship.Key;
         }
 
-        return LargeShipSize;
+        return bestSize == int.MaxValue ? LargeShipSize : bestSize;
     }
 
     private PuzzleGenerationSettingsSO GetSettings()

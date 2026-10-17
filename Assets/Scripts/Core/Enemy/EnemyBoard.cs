@@ -6,6 +6,8 @@ public class EnemyBoard
     public const int Empty = LevelDataSO.CellData.Empty;
 
     private readonly int[,,] _cells;
+    private readonly List<((int x, int y) start, (int x, int y) direction)> _firingLines =
+        new List<((int x, int y) start, (int x, int y) direction)>();
 
     public int Width { get; }
     public int Height { get; }
@@ -29,11 +31,35 @@ public class EnemyBoard
         }
     }
 
-    public static EnemyBoard FromLevel(LevelDataSO level)
+    public static EnemyBoard FromLevel(LevelDataSO level,
+        IReadOnlyList<PathPoint> battlePoints = null, EnemyCellConnector connector = null)
     {
         int width = Mathf.Max(1, level.Width);
         int height = Mathf.Max(1, level.Height);
         var board = new EnemyBoard(width, height, 1);
+
+        if (battlePoints != null && connector != null)
+        {
+            for (int index = 0; index < battlePoints.Count; index++)
+            {
+                if (battlePoints[index] != null &&
+                    connector.TryGetLine(battlePoints[index], out var start, out var direction))
+                    board._firingLines.Add((start, direction));
+            }
+        }
+        else
+        {
+            for (int x = 0; x < width; x++)
+            {
+                board._firingLines.Add(((x, 0), (0, 1)));
+                board._firingLines.Add(((x, height - 1), (0, -1)));
+            }
+            for (int y = 0; y < height; y++)
+            {
+                board._firingLines.Add(((0, y), (1, 0)));
+                board._firingLines.Add(((width - 1, y), (-1, 0)));
+            }
+        }
 
         if (level.Grid == null)
             return board;
@@ -62,6 +88,7 @@ public class EnemyBoard
         {
             RemainingTotal = RemainingTotal
         };
+        clone._firingLines.AddRange(_firingLines);
 
         for (int x = 0; x < Width; x++)
         {
@@ -94,38 +121,55 @@ public class EnemyBoard
 
     public bool IsExposed(int x, int y, int z)
     {
-        if (IsInside(x, y, z) == false)
-            return false;
-
-        if (_cells[x, y, z] == Empty)
-            return false;
-
-        for (int above = z + 1; above < Layers; above++)
-        {
-            if (_cells[x, y, above] != Empty)
-                return false;
-        }
-
-        return true;
+        return z == 0 && IsInside(x, y, z) && GetExposedCells().Contains((x, y));
     }
 
     public int ExposedCount(int colorIndex)
     {
         int count = 0;
-
-        for (int x = 0; x < Width; x++)
+        foreach (var cell in GetExposedCells())
         {
-            for (int y = 0; y < Height; y++)
-            {
-                for (int z = 0; z < Layers; z++)
-                {
-                    if (_cells[x, y, z] == colorIndex && IsExposed(x, y, z))
-                        count++;
-                }
-            }
+            if (_cells[cell.x, cell.y, 0] == colorIndex)
+                count++;
         }
-
         return count;
+    }
+
+    private HashSet<(int x, int y)> GetExposedCells()
+    {
+        var cells = new HashSet<(int x, int y)>();
+        for (int index = 0; index < _firingLines.Count; index++)
+        {
+            if (TryGetLineTarget(_firingLines[index], out var target))
+                cells.Add(target);
+        }
+        return cells;
+    }
+
+    private bool TryGetLineTarget(
+        ((int x, int y) start, (int x, int y) direction) line, out (int x, int y) target)
+    {
+        target = (-1, -1);
+        var start = line.start;
+        var direction = line.direction;
+        bool entersFromBoundary =
+            (direction == (1, 0) && start.x == 0) ||
+            (direction == (-1, 0) && start.x == Width - 1) ||
+            (direction == (0, 1) && start.y == 0) ||
+            (direction == (0, -1) && start.y == Height - 1);
+        if (!entersFromBoundary || !IsInside(start.x, start.y, 0))
+            return false;
+
+        for (int x = start.x, y = start.y; IsInside(x, y, 0);
+             x += direction.x, y += direction.y)
+        {
+            if (_cells[x, y, 0] == Empty)
+                continue;
+
+            target = (x, y);
+            return true;
+        }
+        return false;
     }
 
     public int RemainingCount(int colorIndex)
@@ -150,48 +194,35 @@ public class EnemyBoard
     public List<int> GetExposedColors()
     {
         var colors = new List<int>();
-
-        for (int x = 0; x < Width; x++)
+        foreach (var cell in GetExposedCells())
         {
-            for (int y = 0; y < Height; y++)
-            {
-                for (int z = 0; z < Layers; z++)
-                {
-                    int color = _cells[x, y, z];
-                    if (color == Empty || IsExposed(x, y, z) == false)
-                        continue;
-
-                    if (colors.Contains(color) == false)
-                        colors.Add(color);
-                }
-            }
+            int color = _cells[cell.x, cell.y, 0];
+            if (!colors.Contains(color))
+                colors.Add(color);
         }
-
         return colors;
     }
 
     public int RemoveExposed(int colorIndex, int count)
     {
-        if (count <= 0)
-            return 0;
-
         int removed = 0;
-
-        for (int z = Layers - 1; z >= 0 && removed < count; z--)
+        bool fired;
+        do
         {
-            for (int y = 0; y < Height && removed < count; y++)
+            fired = false;
+            for (int index = 0; index < _firingLines.Count && removed < count; index++)
             {
-                for (int x = 0; x < Width && removed < count; x++)
-                {
-                    if (_cells[x, y, z] != colorIndex || IsExposed(x, y, z) == false)
-                        continue;
+                if (!TryGetLineTarget(_firingLines[index], out var target) ||
+                    _cells[target.x, target.y, 0] != colorIndex)
+                    continue;
 
-                    _cells[x, y, z] = Empty;
-                    removed++;
-                    RemainingTotal--;
-                }
+                _cells[target.x, target.y, 0] = Empty;
+                RemainingTotal--;
+                removed++;
+                fired = true;
             }
         }
+        while (fired && removed < count);
 
         return removed;
     }
