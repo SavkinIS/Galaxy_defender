@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: GameSessionSettings
   m_EditorClassIdentifier: 
   _acceleratedTimeScale: 3
-  _fullBattleTimeScale: 1.2
+  _fullBattleTimeScale: 1.5
