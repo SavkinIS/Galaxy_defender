@@ -14,6 +14,7 @@ namespace Core.Ship
         private readonly ShipShooterProvider _shootProvider;
         private bool _isOnParking;
         private readonly IShipsController _shipsController;
+        private bool _parkingCellsReleased;
 
         public Ship(ShipData shipData, ShipView view, ShipParkingMover shipParkingMover,
             Action<RimPlacement, int> releaseParkingCells, BattleShipMover shipBattleMover,
@@ -49,7 +50,12 @@ namespace Core.Ship
 
         public void ReleaseParkingCells()
         {
+            if (_parkingCellsReleased)
+                return;
+
+            _parkingCellsReleased = true;
             _releaseParkingCells(Placement, _shipData.Size);
+            _shipsController.OnShipLeftParking();
         }
 
         public void EscapeParking()

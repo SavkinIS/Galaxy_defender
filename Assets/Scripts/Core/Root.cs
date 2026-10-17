@@ -13,6 +13,7 @@ namespace Core
         [SerializeField] private BattleShipMover _battleShipMover;
         [SerializeField] private EnemyCellConnector _enemyCellConnector;
         [SerializeField] private WaitingZonesHandler _waitingZones;
+        [SerializeField] private GameSessionSettingsSO _gameSessionSettings;
         [SerializeField] private UnityEngine.Events.UnityEvent _onWaitingZoneOverflow = new UnityEngine.Events.UnityEvent();
 
         private ShipsController _shipsController;
@@ -21,7 +22,7 @@ namespace Core
 
         private void Awake()
         {
-            _gameSessionHandler = new GameSessionHandler();
+            _gameSessionHandler = new GameSessionHandler(_gameSessionSettings);
             _waitingZonesController = new WaitingZonesController(
                 _waitingZones.Zones, _gameSessionHandler, _puzzle.RequestedWaitingSlots);
             _puzzle.ConfigureGeneration(_waitingZonesController.Capacity,
@@ -48,6 +49,11 @@ namespace Core
         private void OnDisable()
         {
             UnSubscribe();
+        }
+
+        private void OnDestroy()
+        {
+            _gameSessionHandler?.Dispose();
         }
 
         private void UnSubscribe()

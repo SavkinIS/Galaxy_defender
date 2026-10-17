@@ -8,12 +8,36 @@ namespace Core
         Failed
     }
 
-    public class GameSessionHandler : IGameSessionHandler
+    public class GameSessionHandler : IGameSessionHandler, IDisposable
     {
+        private readonly GameTimeHandler _gameTimeHandler;
+
+        public GameSessionHandler(GameSessionSettingsSO settings)
+        {
+            float parkingEmptyTimeScale = settings != null
+                ? settings.AcceleratedTimeScale
+                : GameSessionSettingsSO.DefaultAcceleratedTimeScale;
+            float fullBattleTimeScale = settings != null
+                ? settings.FullBattleTimeScale
+                : GameSessionSettingsSO.DefaultFullBattleTimeScale;
+            _gameTimeHandler = new GameTimeHandler(parkingEmptyTimeScale, fullBattleTimeScale);
+        }
+
         public GameSessionState State { get; private set; } = GameSessionState.Running;
         public bool IsRunning => State == GameSessionState.Running;
 
         public event Action WaitingZoneOverflow;
+
+        public void UpdateTimeAcceleration(bool allBattleSlotsOccupied, bool shipsRemainOnParking)
+        {
+            if (IsRunning)
+                _gameTimeHandler.UpdateAcceleration(allBattleSlotsOccupied, shipsRemainOnParking);
+        }
+
+        public void HandleBattleCompleted()
+        {
+            _gameTimeHandler.Reset();
+        }
 
         public void HandleWaitingZoneOverflow()
         {
@@ -21,7 +45,13 @@ namespace Core
                 return;
 
             State = GameSessionState.Failed;
+            _gameTimeHandler.Reset();
             WaitingZoneOverflow?.Invoke();
+        }
+
+        public void Dispose()
+        {
+            _gameTimeHandler.Reset();
         }
     }
 }

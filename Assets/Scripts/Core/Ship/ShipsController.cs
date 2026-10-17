@@ -19,6 +19,7 @@ namespace Core.Ship
         private readonly IGameSessionHandler _gameSession;
 
         private List<Ship> _activeShips =  new List<Ship>();
+        private int _remainingParkingShips;
 
         public ShipsController(ShipsPuzzle shipsPuzzle, ShipParkingMover shipParkingMover,
             BattleShipMover shipBattleMover, EnemyMap enemyMap, EnemyCellConnector enemyCellConnector,
@@ -55,6 +56,8 @@ namespace Core.Ship
                         _shipsPuzzle.ReleaseShipCells,
                         _shipBattleMover, _shootProvider, this);
             }
+
+            _remainingParkingShips = _ships.Count;
         }
 
         public void MouseClicked(Vector2 screenPosition)
@@ -91,6 +94,7 @@ namespace Core.Ship
 
             _activeShips.Add(ship);
             _waitingZones.ReleaseShip(ship.Transform);
+            UpdateTimeAcceleration();
             return true;
         }
 
@@ -98,7 +102,8 @@ namespace Core.Ship
 
         public void ReleaseBattleSlot(Ship ship)
         {
-            _activeShips.Remove(ship);
+            if (_activeShips.Remove(ship))
+                UpdateTimeAcceleration();
         }
 
         public bool TryReserveWaitingZone(Ship ship, out Transform target)
@@ -115,12 +120,46 @@ namespace Core.Ship
         {
             _waitingZones.ReleaseShip(ship.Transform);
             _activeShips.Remove(ship);
+            UpdateTimeAcceleration();
+
+            if (AreAllShipsCompleted())
+                _gameSession.HandleBattleCompleted();
+        }
+
+        public void OnShipLeftParking()
+        {
+            if (_remainingParkingShips > 0)
+                _remainingParkingShips--;
+
+            UpdateTimeAcceleration();
         }
 
         public void OnShipWaiting(Ship ship)
         {
             _waitingZones.PlaceShip(ship.Transform);
-            _activeShips.Remove(ship);
+            if (_activeShips.Remove(ship))
+                UpdateTimeAcceleration();
+        }
+
+        private void UpdateTimeAcceleration()
+        {
+            _gameSession.UpdateTimeAcceleration(
+                _activeShips.Count >= ShipsInBattle,
+                _remainingParkingShips > 0);
+        }
+
+        private bool AreAllShipsCompleted()
+        {
+            if (_ships == null || _ships.Count == 0)
+                return false;
+
+            foreach (Ship ship in _ships.Values)
+            {
+                if (ship != null && ship.IsNoEmpty)
+                    return false;
+            }
+
+            return true;
         }
 
         private bool CanLeaveParking(Ship ship)

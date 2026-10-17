@@ -11,5 +11,6 @@ namespace Core.Ship
         void ReleaseWaitingReservation(Ship ship);
         void OnShipWaiting(Ship ship);
         void OnShipCompleted(Ship ship);
+        void OnShipLeftParking();
     }
 }
