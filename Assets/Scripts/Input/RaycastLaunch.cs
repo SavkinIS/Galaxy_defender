@@ -8,7 +8,11 @@ public static class RaycastLaunch
 
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
-            if (hit.transform.TryGetComponent(out T component))
+            // The click may land on a child object (overlays, decorations), so the component
+            // is looked up through the whole hierarchy.
+            var component = hit.transform.GetComponentInParent<T>();
+
+            if (component != null)
             {
                 hitObject = component;
                 return true;

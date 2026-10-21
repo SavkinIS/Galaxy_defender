@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Core.Ship.States
 {
     public class EndBattleRoundState : IShipState
@@ -7,6 +9,7 @@ namespace Core.Ship.States
         private readonly IShipsController _shipsController;
         private bool _hasReservation;
         private bool _hasArrived;
+        private bool _isActive;
 
         public EndBattleRoundState(Ship ship, BattleShipMover battleMover,
             IShipsController shipsController)
@@ -20,6 +23,7 @@ namespace Core.Ship.States
         {
             _hasArrived = false;
             _hasReservation = false;
+            _isActive = true;
 
             if (!_ship.IsNoEmpty)
             {
@@ -41,11 +45,26 @@ namespace Core.Ship.States
                 return;
             }
             
-            if (!_shipsController.TryReserveWaitingZone(_ship, out var target))
+            // The reservation may require a rewarded ad when every unlocked zone is busy,
+            // so the placement continues in the callback.
+            _shipsController.TryReserveWaitingZone(_ship, OnReserved, OnReserveFailed);
+        }
+
+        private void OnReserved(Transform target)
+        {
+            if (!_isActive)
+            {
+                _shipsController.ReleaseWaitingReservation(_ship);
                 return;
+            }
 
             _hasReservation = true;
             _ship.MoveToWaitingZone(target, OnArrived);
+        }
+
+        private void OnReserveFailed()
+        {
+            // The waiting zone overflow is reported by the zones controller.
         }
 
         private void OnArrived()
@@ -57,6 +76,7 @@ namespace Core.Ship.States
 
         public void Exit()
         {
+            _isActive = false;
             _ship.StopWaitingMovement();
             if (!_hasArrived && _hasReservation)
                 _shipsController.ReleaseWaitingReservation(_ship);

@@ -7,6 +7,7 @@ namespace Core.Waiting
     {
         [SerializeField] private GameObject _adBtn;
         [SerializeField] private Transform _shipPosition;
+        [SerializeField] private GameObject _lockedOverlay;
         
         private Transform _transform;
 
@@ -15,7 +16,7 @@ namespace Core.Waiting
 
         private void Awake()
         {
-            _transform =  transform;
+            _transform = transform;
         }
 
         public void PlaceShip(Transform ship)
@@ -26,6 +27,11 @@ namespace Core.Waiting
             ship.position = _shipPosition.position;
             ship.rotation = _shipPosition.rotation;
         }
-        
+
+        public void SetLocked(bool locked)
+        {
+            if (_lockedOverlay != null)
+                _lockedOverlay.SetActive(locked);
+        }
     }
 }

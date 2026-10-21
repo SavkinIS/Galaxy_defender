@@ -1,3 +1,4 @@
+using Core.Ad;
 using Core.Ship;
 using Core.Waiting;
 using UnityEngine;
@@ -14,6 +15,9 @@ namespace Core
         [SerializeField] private EnemyCellConnector _enemyCellConnector;
         [SerializeField] private WaitingZonesHandler _waitingZones;
         [SerializeField] private GameSessionSettingsSO _gameSessionSettings;
+        [SerializeField] private AdUnlockZoneOffer _unlockZoneOffer;
+        [SerializeField] private AdOverflowOffer _overflowOffer;
+        [SerializeField] private GameOverPopup _gameOverPopup;
         [SerializeField] private UnityEngine.Events.UnityEvent _onWaitingZoneOverflow = new UnityEngine.Events.UnityEvent();
 
         private ShipsController _shipsController;
@@ -22,9 +26,23 @@ namespace Core
 
         private void Awake()
         {
+            // Ensure ADController exists in the scene
+            if (ADController.Instance == null)
+            {
+                new GameObject("ADController").AddComponent<ADController>();
+            }
+
+            if (_unlockZoneOffer == null)
+                _unlockZoneOffer = FindObjectOfType<AdUnlockZoneOffer>(true);
+            if (_overflowOffer == null)
+                _overflowOffer = FindObjectOfType<AdOverflowOffer>(true);
+            if (_gameOverPopup == null)
+                _gameOverPopup = FindObjectOfType<GameOverPopup>(true);
+
             _gameSessionHandler = new GameSessionHandler(_gameSessionSettings);
             _waitingZonesController = new WaitingZonesController(
-                _waitingZones.Zones, _gameSessionHandler, _puzzle.RequestedWaitingSlots);
+                _waitingZones.Zones, _gameSessionHandler, _gameSessionSettings,
+                _puzzle.RequestedWaitingSlots, _unlockZoneOffer, _overflowOffer);
             _puzzle.ConfigureGeneration(_waitingZonesController.Capacity,
                 _battleShipMover.Points, _enemyCellConnector);
             _shipsController = new ShipsController(_puzzle, _shipParkingMover, _battleShipMover,
@@ -33,6 +51,7 @@ namespace Core
 
         private void OnWaitingZoneOverflow()
         {
+            _gameOverPopup?.Show();
             _onWaitingZoneOverflow.Invoke();
         }
 
@@ -59,12 +78,14 @@ namespace Core
         private void UnSubscribe()
         {
             _playerInput.MouseClicked -= _shipsController.MouseClicked;
+            _playerInput.MouseClicked -= _waitingZonesController.MouseClicked;
             _gameSessionHandler.WaitingZoneOverflow -= OnWaitingZoneOverflow;
         }
 
         private void Subscribe()
         {
             _playerInput.MouseClicked += _shipsController.MouseClicked;
+            _playerInput.MouseClicked += _waitingZonesController.MouseClicked;
             _gameSessionHandler.WaitingZoneOverflow += OnWaitingZoneOverflow;
         }
     }

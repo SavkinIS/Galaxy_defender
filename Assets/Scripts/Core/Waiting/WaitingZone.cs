@@ -4,16 +4,19 @@ namespace Core.Waiting
 {
     public class WaitingZone
     {
-        private readonly WaitingZoneView _view;
+        public WaitingZoneView View { get; }
         private Transform _ship;
+        private bool _isLocked;
 
-        public WaitingZone(WaitingZoneView view)
+        public WaitingZone(WaitingZoneView view, bool isLocked = false)
         {
-            _view = view;
+            View = view;
+            _isLocked = isLocked;
         }
 
-        public Transform ShipPosition => _view.ShipPosition;
-        public bool IsFree => _ship == null && ShipPosition != null;
+        public Transform ShipPosition => View.ShipPosition;
+        public bool IsFree => _ship == null && ShipPosition != null && !_isLocked;
+        public bool IsLocked => _isLocked;
 
         public bool TryReserve(Transform ship)
         {
@@ -29,13 +32,18 @@ namespace Core.Waiting
             if (ship == null || _ship != ship)
                 return;
 
-            _view.PlaceShip(ship);
+            View.PlaceShip(ship);
         }
 
         public void ReleaseShip(Transform ship)
         {
             if (_ship == ship)
                 _ship = null;
+        }
+
+        public void SetLocked(bool locked)
+        {
+            _isLocked = locked;
         }
     }
 }

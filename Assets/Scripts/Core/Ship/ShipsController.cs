@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Core.Waiting;
 using UnityEngine;
@@ -62,6 +63,10 @@ namespace Core.Ship
 
         public void MouseClicked(Vector2 screenPosition)
         {
+            var adController = ADController.Instance;
+            if (adController != null && adController.IsShowing)
+                return;
+
             if (!_gameSession.IsRunning || _activeShips.Count >= ShipsInBattle)
                 return;
             
@@ -106,9 +111,9 @@ namespace Core.Ship
                 UpdateTimeAcceleration();
         }
 
-        public bool TryReserveWaitingZone(Ship ship, out Transform target)
+        public void TryReserveWaitingZone(Ship ship, Action<Transform> onReserved, Action onFailed = null)
         {
-            return _waitingZones.TryReserve(ship.Transform, out target);
+            _waitingZones.TryReserve(ship.Transform, onReserved, onFailed);
         }
 
         public void ReleaseWaitingReservation(Ship ship)

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Core.Ship
@@ -7,7 +8,7 @@ namespace Core.Ship
         bool HasFreeBattleSlot { get; }
         bool TryEnterBattle(Ship ship);
         void ReleaseBattleSlot(Ship ship);
-        bool TryReserveWaitingZone(Ship ship, out Transform target);
+        void TryReserveWaitingZone(Ship ship, Action<Transform> onReserved, Action onFailed = null);
         void ReleaseWaitingReservation(Ship ship);
         void OnShipWaiting(Ship ship);
         void OnShipCompleted(Ship ship);
