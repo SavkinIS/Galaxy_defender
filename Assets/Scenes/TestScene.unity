@@ -21734,7 +21734,7 @@ GameObject:
   - component: {fileID: 1818929149}
   - component: {fileID: 1818929148}
   m_Layer: 5
-  m_Name: AdUnlockZoneOffer (1)
+  m_Name: GameOverPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
