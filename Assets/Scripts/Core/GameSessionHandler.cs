@@ -5,7 +5,8 @@ namespace Core
     public enum GameSessionState
     {
         Running,
-        Failed
+        Failed,
+        Won
     }
 
     public class GameSessionHandler : IGameSessionHandler, IDisposable
@@ -27,6 +28,7 @@ namespace Core
         public bool IsRunning => State == GameSessionState.Running;
 
         public event Action WaitingZoneOverflow;
+        public event Action BattleCompleted;
 
         public void UpdateTimeAcceleration(bool allBattleSlotsOccupied, bool shipsRemainOnParking)
         {
@@ -36,7 +38,12 @@ namespace Core
 
         public void HandleBattleCompleted()
         {
+            if (!IsRunning)
+                return;
+
+            State = GameSessionState.Won;
             _gameTimeHandler.Reset();
+            BattleCompleted?.Invoke();
         }
 
         public void HandleWaitingZoneOverflow()

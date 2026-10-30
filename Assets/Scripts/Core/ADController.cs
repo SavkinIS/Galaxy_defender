@@ -7,21 +7,12 @@ namespace Core
 {
     public class ADController : MonoBehaviour
     {
-        private sealed class AdRequest
-        {
-            public AdOfferPopup Popup;
-            public string Message;
-            public Action Granted;
-            public Action Declined;
-        }
-
-        private const string DefaultMessage = "Посмотреть рекламу?";
-
         public static ADController Instance { get; private set; }
 
         public bool IsShowing => _isShowing;
 
         private readonly Queue<AdRequest> _requests = new Queue<AdRequest>();
+        private readonly Dictionary<AdRequestType, AdOfferPopup> _popups = new Dictionary<AdRequestType, AdOfferPopup>();
         private bool _isShowing;
 
         private void Awake()
@@ -36,26 +27,17 @@ namespace Core
             DontDestroyOnLoad(gameObject);
         }
 
-        public void ShowRewardedAd(Action onRewardGranted, Action onDeclined = null)
+        public void ShowRewardedAd(AdRequestType type, Action onGranted, Action onDeclined = null)
         {
-            ShowRewardedAd(null, DefaultMessage, onRewardGranted, onDeclined);
+            ShowRewardedAd(AdRequests.Create(type, onGranted, onDeclined));
         }
 
-        public void ShowRewardedAd(string message, Action onRewardGranted, Action onDeclined = null)
+        public void ShowRewardedAd(AdRequest request)
         {
-            ShowRewardedAd(null, message, onRewardGranted, onDeclined);
-        }
+            if (request == null)
+                return;
 
-        public void ShowRewardedAd(AdOfferPopup popup, string message, Action onRewardGranted,
-            Action onDeclined = null)
-        {
-            _requests.Enqueue(new AdRequest
-            {
-                Popup = popup,
-                Message = message,
-                Granted = onRewardGranted,
-                Declined = onDeclined
-            });
+            _requests.Enqueue(request);
 
             if (!_isShowing)
                 ShowNext();
@@ -70,31 +52,56 @@ namespace Core
             }
 
             _isShowing = true;
-            var request = _requests.Dequeue();
-            if (request.Popup != null && request.Popup.IsConfigured)
+            AdRequest request = _requests.Dequeue();
+            AdOfferPopup popup = ResolvePopup(request);
+
+            if (popup != null)
             {
-                request.Popup.Present(request.Message,
-                    () => Resolve(request, true),
-                    () => Resolve(request, false));
+                popup.Present(request.Message,
+                    () => Resolve(request, popup, true),
+                    () => Resolve(request, popup, false));
                 return;
             }
 
-            request.Declined?.Invoke();
+            if (request.RequiresPopup)
+                request.OnDeclined?.Invoke();
+            else
+                request.OnGranted?.Invoke();
+
             ShowNext();
         }
 
-        private void Resolve(AdRequest request, bool granted)
+        private AdOfferPopup ResolvePopup(AdRequest request)
         {
-            if (request.Popup != null && request.Popup.IsConfigured)
-                request.Popup.Dismiss();
+            AdOfferPopup popup = request.Popup != null ? request.Popup : FindPopup(request.Type);
+            return popup != null && popup.IsConfigured ? popup : null;
+        }
+
+        private AdOfferPopup FindPopup(AdRequestType type)
+        {
+            if (_popups.TryGetValue(type, out AdOfferPopup cached) && cached != null)
+                return cached;
+
+            AdOfferPopup[] popups = FindObjectsOfType<AdOfferPopup>(true);
+            foreach (AdOfferPopup popup in popups)
+            {
+                if (popup != null)
+                    _popups[popup.Type] = popup;
+            }
+
+            return _popups.TryGetValue(type, out AdOfferPopup found) ? found : null;
+        }
+
+        private void Resolve(AdRequest request, AdOfferPopup popup, bool granted)
+        {
+            popup.Dismiss();
 
             if (granted)
-                request.Granted?.Invoke();
+                request.OnGranted?.Invoke();
             else
-                request.Declined?.Invoke();
+                request.OnDeclined?.Invoke();
 
             ShowNext();
         }
-
     }
 }

@@ -16,19 +16,19 @@ namespace Core.Ad
         private Action _onDeclined;
 
         internal bool IsConfigured => _acceptButton != null && _declineButton != null;
-
-        protected abstract string Prompt { get; }
+        
+        public abstract AdRequestType Type { get; }
 
         public void Show(Action onAccepted, Action onDeclined = null)
         {
-            var adController = ADController.Instance;
+            ADController adController = ADController.Instance;
             if (adController == null)
             {
                 onDeclined?.Invoke();
                 return;
             }
 
-            adController.ShowRewardedAd(this, Prompt, onAccepted, onDeclined);
+            adController.ShowRewardedAd(Type, onAccepted, onDeclined);
         }
 
         internal void Present(string message, Action onAccepted, Action onDeclined)
