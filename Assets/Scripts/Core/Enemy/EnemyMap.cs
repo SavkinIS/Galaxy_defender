@@ -2,10 +2,23 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Block order used by the volley booster. Kept switchable so both sweeps can be compared.
+/// </summary>
+public enum VolleySweep
+{
+    /// <summary>Perimeter first, then ring by ring towards the centre.</summary>
+    Rings = 0,
+
+    /// <summary>Plain row-by-row walk, the original behaviour.</summary>
+    Rows = 1
+}
+
 public class EnemyMap : MonoBehaviour
 {
     [SerializeField] private List<Cell> _cells =  new List<Cell>();
     [SerializeField] private LevelDataSO _levelData;
+    [SerializeField] private VolleySweep _volleySweep = VolleySweep.Rings;
 
     private struct CellLink
     {
@@ -25,7 +38,17 @@ public class EnemyMap : MonoBehaviour
     private int[] _lastInColumns;
     private int _width;
     private int _height;
-    private int _volleyCursor;
+    private int[] _volleyOrder;
+
+    /// <summary>
+    /// Sweep order for <see cref="TryDestroyAnyCell"/>. Set it from code or from the inspector to
+    /// compare the ring sweep with the plain row walk without touching the volley booster.
+    /// </summary>
+    public VolleySweep Sweep
+    {
+        get => _volleySweep;
+        set => _volleySweep = value;
+    }
 
     private void Awake()
     {
@@ -184,31 +207,81 @@ public class EnemyMap : MonoBehaviour
     }
 
     /// <summary>
-    /// Destroys the next active block of the given color, walking the grid with a wrapping cursor
-    /// so consecutive shots do not eat a single row. Blocks buried inside a chain are valid
-    /// targets here, unlike <see cref="TryGetTargetCellIndex"/>.
+    /// Destroys the next active block of the given color. The order depends on
+    /// <see cref="VolleySweep"/>: <see cref="VolleySweep.Rings"/> sweeps the perimeter and then
+    /// closes in towards the centre, <see cref="VolleySweep.Rows"/> walks row by row as before.
+    /// Blocks buried inside a chain are valid targets here, unlike <see cref="TryGetTargetCellIndex"/>.
     /// </summary>
     public bool TryDestroyAnyCell(int colorIndex)
     {
         if (_cellLinks == null || _cellLinks.Length == 0)
             return false;
 
-        var total = _cellLinks.Length;
+        var useRings = _volleySweep == VolleySweep.Rings;
 
-        for (var offset = 0; offset < total; offset++)
+        if (useRings && (_volleyOrder == null || _volleyOrder.Length != _cellLinks.Length))
+            BuildVolleyOrder();
+
+        for (var offset = 0; offset < _cellLinks.Length; offset++)
         {
-            var index = (_volleyCursor + offset) % total;
+            var index = useRings ? _volleyOrder[offset] : offset;
 
             if (!_cellLinks[index].IsActive || _cellLinks[index].ColorIndex != colorIndex)
                 continue;
 
-            _volleyCursor = (index + 1) % total;
             var cell = _cellLinks[index].Cell;
             DestroyCell((cell.X, cell.Y));
             return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Builds the ring-by-ring order once: the ring index grows towards the centre, and inside a
+    /// ring cells are sorted by the angle around the centre, so the sweep runs like a circle.
+    /// </summary>
+    private void BuildVolleyOrder()
+    {
+        var total = _width * _height;
+        var entries = new List<VolleyEntry>(total);
+        var centerX = (_width - 1) * 0.5f;
+        var centerY = (_height - 1) * 0.5f;
+
+        for (var y = 0; y < _height; y++)
+        {
+            for (var x = 0; x < _width; x++)
+            {
+                var ring = Mathf.Min(Mathf.Min(x, y), Mathf.Min(_width - 1 - x, _height - 1 - y));
+                var angle = Mathf.Atan2(y - centerY, x - centerX);
+                entries.Add(new VolleyEntry(y * _width + x, ring, angle));
+            }
+        }
+
+        entries.Sort((left, right) =>
+        {
+            var byRing = left.Ring.CompareTo(right.Ring);
+            return byRing != 0 ? byRing : left.Angle.CompareTo(right.Angle);
+        });
+
+        _volleyOrder = new int[entries.Count];
+
+        for (var index = 0; index < entries.Count; index++)
+            _volleyOrder[index] = entries[index].Index;
+    }
+
+    private struct VolleyEntry
+    {
+        public readonly int Index;
+        public readonly int Ring;
+        public readonly float Angle;
+
+        public VolleyEntry(int index, int ring, float angle)
+        {
+            Index = index;
+            Ring = ring;
+            Angle = angle;
+        }
     }
 
     public int DestroyColor(int colorIndex)
