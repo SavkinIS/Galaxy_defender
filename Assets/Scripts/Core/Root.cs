@@ -1,4 +1,5 @@
 using Core.Ad;
+using Core.Boosts;
 using Core.Currency;
 using Core.Ship;
 using Core.Waiting;
@@ -21,12 +22,15 @@ namespace Core
         [SerializeField] private GameOverPopup _gameOverPopup;
         [SerializeField] private WinPopup _winPopup;
         [SerializeField] private SoftCurrencyView _softCurrencyView;
+        [SerializeField] private BoosterHolder _boosterHolder;
         [SerializeField] private UnityEngine.Events.UnityEvent _onWaitingZoneOverflow = new UnityEngine.Events.UnityEvent();
 
         private SoftCurrencyController _softCurrencyController;
         private ShipsController _shipsController;
         private GameSessionHandler _gameSessionHandler;
         private WaitingZonesController _waitingZonesController;
+        private GamePauseService _pauseService;
+        private BoostersController _boostersController;
 
         private void Awake()
         {
@@ -46,12 +50,15 @@ namespace Core
                 _winPopup = FindObjectOfType<WinPopup>(true);
             if (_softCurrencyView == null)
                 _softCurrencyView = FindObjectOfType<SoftCurrencyView>(true);
+            if (_boosterHolder == null)
+                _boosterHolder = FindObjectOfType<BoosterHolder>(true);
 
             _softCurrencyController = new SoftCurrencyController();
             _softCurrencyView?.Init(_softCurrencyController);
             _winPopup?.Init(_softCurrencyController);
 
-            _gameSessionHandler = new GameSessionHandler(_gameSessionSettings);
+            _pauseService = new GamePauseService();
+            _gameSessionHandler = new GameSessionHandler(_gameSessionSettings, _pauseService);
             _waitingZonesController = new WaitingZonesController(
                 _waitingZones.Zones, _gameSessionHandler, _gameSessionSettings,
                 _puzzle.RequestedWaitingSlots, _unlockZoneOffer, _overflowOffer);
@@ -59,6 +66,13 @@ namespace Core
                 _battleShipMover.Points, _enemyCellConnector);
             _shipsController = new ShipsController(_puzzle, _shipParkingMover, _battleShipMover,
                 _enemyMap, _enemyCellConnector, _waitingZonesController, _gameSessionHandler);
+
+            if (_boosterHolder != null)
+            {
+                _boosterHolder.Init(_softCurrencyController, _shipsController,
+                    _waitingZonesController, _enemyMap, _pauseService);
+                _boostersController = _boosterHolder.Controller;
+            }
         }
 
         private void OnWaitingZoneOverflow()
@@ -78,6 +92,7 @@ namespace Core
         private void Start()
         {
             _shipsController.Initialize();
+            _boostersController?.RefreshAll();
         }
 
         private void OnEnable()
@@ -97,18 +112,29 @@ namespace Core
 
         private void UnSubscribe()
         {
-            _playerInput.MouseClicked -= _shipsController.MouseClicked;
-            _playerInput.MouseClicked -= _waitingZonesController.MouseClicked;
+            _playerInput.MouseClicked -= OnMouseClicked;
             _gameSessionHandler.WaitingZoneOverflow -= OnWaitingZoneOverflow;
             _gameSessionHandler.BattleCompleted -= OnBattleCompleted;
         }
 
         private void Subscribe()
         {
-            _playerInput.MouseClicked += _shipsController.MouseClicked;
-            _playerInput.MouseClicked += _waitingZonesController.MouseClicked;
+            _playerInput.MouseClicked += OnMouseClicked;
             _gameSessionHandler.WaitingZoneOverflow += OnWaitingZoneOverflow;
             _gameSessionHandler.BattleCompleted += OnBattleCompleted;
+        }
+
+        /// <summary>
+        /// A booster waiting for a target has priority: the same click must not release a ship or
+        /// reserve a waiting zone.
+        /// </summary>
+        private void OnMouseClicked(Vector2 screenPosition)
+        {
+            if (_boostersController != null && _boostersController.TryHandleWorldClick(screenPosition))
+                return;
+
+            _shipsController?.MouseClicked(screenPosition);
+            _waitingZonesController?.MouseClicked(screenPosition);
         }
     }
 }

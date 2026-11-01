@@ -5,6 +5,7 @@ namespace Core.Waiting
     public class WaitingZone
     {
         public WaitingZoneView View { get; }
+        private readonly bool _isStarter;
         private Transform _ship;
         private bool _isLocked;
 
@@ -12,11 +13,14 @@ namespace Core.Waiting
         {
             View = view;
             _isLocked = isLocked;
+            _isStarter = !isLocked;
         }
 
         public Transform ShipPosition => View.ShipPosition;
         public bool IsFree => _ship == null && ShipPosition != null && !_isLocked;
         public bool IsLocked => _isLocked;
+        public bool IsStarter => _isStarter;
+        public bool IsOccupied => _ship != null;
 
         public bool TryReserve(Transform ship)
         {

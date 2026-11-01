@@ -7,8 +7,8 @@ namespace Core.Ship
 {
     public class ShipsController : IShipsController
     {
-        private const int ShipsInBattle = 5;
-        
+        private const int BaseBattleSlots = 5;
+
         private readonly ShipsPuzzle _shipsPuzzle;
         private Dictionary<ShipView, Ship> _ships;
         private readonly ShipParkingMover _shipParkingMover;
@@ -21,6 +21,28 @@ namespace Core.Ship
 
         private List<Ship> _activeShips =  new List<Ship>();
         private int _remainingParkingShips;
+        private int _battleSlots = BaseBattleSlots;
+        private bool _initialized;
+        private bool _completionSuspended;
+
+        public int BattleSlots => _battleSlots;
+
+        public bool HasShipsOnParking
+        {
+            get
+            {
+                if (_ships == null)
+                    return false;
+
+                foreach (var ship in _ships.Values)
+                {
+                    if (ship != null && ship.IsOnParking)
+                        return true;
+                }
+
+                return false;
+            }
+        }
 
         public ShipsController(ShipsPuzzle shipsPuzzle, ShipParkingMover shipParkingMover,
             BattleShipMover shipBattleMover, EnemyMap enemyMap, EnemyCellConnector enemyCellConnector,
@@ -59,6 +81,7 @@ namespace Core.Ship
             }
 
             _remainingParkingShips = _ships.Count;
+            _initialized = true;
         }
 
         public void MouseClicked(Vector2 screenPosition)
@@ -67,7 +90,7 @@ namespace Core.Ship
             if (adController != null && adController.IsShowing)
                 return;
 
-            if (!_gameSession.IsRunning || _activeShips.Count >= ShipsInBattle)
+            if (!_gameSession.IsRunning || _activeShips.Count >= _battleSlots)
                 return;
             
             if (RaycastLaunch.TryGetClickedObject<ShipView>(screenPosition, out var hitObject))
@@ -86,7 +109,7 @@ namespace Core.Ship
             } 
         }
 
-        public bool TryEnterBattle(Ship ship)
+        public bool TryEnterBattle(Ship ship, bool ignoreSlotLimit = false)
         {
             if (!_gameSession.IsRunning)
                 return false;
@@ -94,7 +117,7 @@ namespace Core.Ship
             if (_activeShips.Contains(ship))
                 return true;
 
-            if (_activeShips.Count >= ShipsInBattle)
+            if (!ignoreSlotLimit && _activeShips.Count >= _battleSlots)
                 return false;
 
             _activeShips.Add(ship);
@@ -103,7 +126,16 @@ namespace Core.Ship
             return true;
         }
 
-        public bool HasFreeBattleSlot => _gameSession.IsRunning && _activeShips.Count < ShipsInBattle;
+        public bool HasFreeBattleSlot => _gameSession.IsRunning && _activeShips.Count < _battleSlots;
+
+        public void IncreaseBattleSlots(int delta)
+        {
+            if (delta <= 0)
+                return;
+
+            _battleSlots += delta;
+            UpdateTimeAcceleration();
+        }
 
         public void ReleaseBattleSlot(Ship ship)
         {
@@ -126,6 +158,18 @@ namespace Core.Ship
             _waitingZones.ReleaseShip(ship.Transform);
             _activeShips.Remove(ship);
             UpdateTimeAcceleration();
+            CheckBattleCompletion();
+        }
+
+        public void SuspendBattleCompletion(bool suspended)
+        {
+            _completionSuspended = suspended;
+        }
+
+        public void CheckBattleCompletion()
+        {
+            if (_completionSuspended)
+                return;
 
             if (AreAllShipsCompleted())
                 _gameSession.HandleBattleCompleted();
@@ -146,16 +190,79 @@ namespace Core.Ship
                 UpdateTimeAcceleration();
         }
 
+        public bool TryGetShip(Transform shipTransform, out Ship ship)
+        {
+            ship = null;
+
+            if (shipTransform == null || _ships == null)
+                return false;
+
+            foreach (var pair in _ships)
+            {
+                if (pair.Key == null || pair.Key.transform != shipTransform)
+                    continue;
+
+                ship = pair.Value;
+                return ship != null;
+            }
+
+            return false;
+        }
+
+        public bool TryForceEscape(ShipView shipView)
+        {
+            if (shipView == null || _ships == null || !_gameSession.IsRunning)
+                return false;
+
+            if (!_ships.TryGetValue(shipView, out var ship) || ship == null || !ship.IsOnParking)
+                return false;
+
+            if (!TryEnterBattle(ship, true))
+                return false;
+
+            ship.EscapeParking();
+            return true;
+        }
+
+        public int RemoveParkingShipsByColor(int colorIndex)
+        {
+            if (_ships == null)
+                return 0;
+
+            var removable = new List<ShipView>();
+
+            foreach (var pair in _ships)
+            {
+                if (pair.Key == null || pair.Value == null || !pair.Value.IsOnParking)
+                    continue;
+
+                var data = pair.Key.Data;
+                if (data == null || data.ColorIndex != colorIndex)
+                    continue;
+
+                removable.Add(pair.Key);
+            }
+
+            foreach (var view in removable)
+            {
+                var ship = _ships[view];
+                _ships.Remove(view);
+                ship.ForceRemoveFromParking();
+            }
+
+            return removable.Count;
+        }
+
         private void UpdateTimeAcceleration()
         {
             _gameSession.UpdateTimeAcceleration(
-                _activeShips.Count >= ShipsInBattle,
+                _activeShips.Count >= _battleSlots,
                 _remainingParkingShips > 0);
         }
 
         private bool AreAllShipsCompleted()
         {
-            if (_ships == null || _ships.Count == 0)
+            if (!_initialized || _ships == null)
                 return false;
 
             foreach (Ship ship in _ships.Values)
@@ -164,7 +271,8 @@ namespace Core.Ship
                     return false;
             }
 
-            return true;
+            // The last ship may still be fighting: the battle ends only after it leaves.
+            return _activeShips.Count == 0;
         }
 
         private bool CanLeaveParking(Ship ship)

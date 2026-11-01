@@ -29,5 +29,14 @@ namespace Core.Ship
             _enemyMap.DestroyCell(targetCellIndex);
             return true;
         }
+
+        /// <summary>
+        /// Hits any block of the given color. Used by the volley booster, which ignores whether
+        /// the block is exposed.
+        /// </summary>
+        public bool TryVolleyShoot(int colorIndex)
+        {
+            return _enemyMap.TryDestroyAnyCell(colorIndex);
+        }
     }
 }

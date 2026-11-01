@@ -27,6 +27,15 @@ namespace Core.Currency
             SetBalance(Balance + amount);
         }
 
+        public bool TrySpend(int amount)
+        {
+            if (amount <= 0 || Balance < amount)
+                return false;
+
+            SetBalance(Balance - amount);
+            return true;
+        }
+
         private void SetBalance(int value)
         {
             int clamped = Mathf.Max(0, value);

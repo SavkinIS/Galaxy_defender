@@ -12,8 +12,9 @@ namespace Core
     public class GameSessionHandler : IGameSessionHandler, IDisposable
     {
         private readonly GameTimeHandler _gameTimeHandler;
+        private readonly GamePauseService _pauseService;
 
-        public GameSessionHandler(GameSessionSettingsSO settings)
+        public GameSessionHandler(GameSessionSettingsSO settings, GamePauseService pauseService = null)
         {
             float parkingEmptyTimeScale = settings != null
                 ? settings.AcceleratedTimeScale
@@ -21,7 +22,9 @@ namespace Core
             float fullBattleTimeScale = settings != null
                 ? settings.FullBattleTimeScale
                 : GameSessionSettingsSO.DefaultFullBattleTimeScale;
-            _gameTimeHandler = new GameTimeHandler(parkingEmptyTimeScale, fullBattleTimeScale);
+            _pauseService = pauseService;
+            _gameTimeHandler = new GameTimeHandler(parkingEmptyTimeScale, fullBattleTimeScale,
+                _pauseService);
         }
 
         public GameSessionState State { get; private set; } = GameSessionState.Running;
@@ -59,6 +62,7 @@ namespace Core
         public void Dispose()
         {
             _gameTimeHandler.Reset();
+            _pauseService?.ForceResume();
         }
     }
 }

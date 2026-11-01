@@ -23,6 +23,7 @@ namespace Core.Ship.States
                 {typeof(WaitingState), new WaitingState(ship, shipBattleMover, shipsController)},
                 {typeof(MoveToBattleFromWaitingZone), new MoveToBattleFromWaitingZone(
                     ship, shipBattleMover, shipsController)},
+                {typeof(VolleyState), new VolleyState(ship)},
                 {typeof(EscapeFromBattle), new EscapeFromBattle(ship)},
             };
             

@@ -21,6 +21,45 @@ namespace Core.Waiting
 
         public int Capacity => _totalSlots;
 
+        public bool AreAllStarterZonesOccupied
+        {
+            get
+            {
+                var hasStarter = false;
+
+                for (var index = 0; index < _zones.Length; index++)
+                {
+                    var zone = _zones[index];
+                    if (zone == null || !zone.IsStarter)
+                        continue;
+
+                    hasStarter = true;
+
+                    if (!zone.IsOccupied)
+                        return false;
+                }
+
+                return hasStarter;
+            }
+        }
+
+        public IReadOnlyList<Transform> OccupiedShips
+        {
+            get
+            {
+                var ships = new List<Transform>();
+
+                foreach (var reservation in _reservations)
+                {
+                    if (reservation.Key != null && reservation.Value != null
+                        && reservation.Value.IsOccupied)
+                        ships.Add(reservation.Key);
+                }
+
+                return ships;
+            }
+        }
+
         public WaitingZonesController(IReadOnlyList<WaitingZoneView> zoneViews,
             IGameSessionHandler gameSession,
             GameSessionSettingsSO settings,

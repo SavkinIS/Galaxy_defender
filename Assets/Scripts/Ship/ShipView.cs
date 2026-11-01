@@ -14,6 +14,7 @@ public class ShipView : MonoBehaviour
 
     private Coroutine _waitingMovement;
     private Coroutine _waitingRoutine;
+    private Coroutine _volleyRoutine;
     private Tween _battleMovement;
     private ShipData _shipData;
     private RimPlacement _placement;
@@ -59,6 +60,21 @@ public class ShipView : MonoBehaviour
 
         StopCoroutine(_waitingRoutine);
         _waitingRoutine = null;
+    }
+
+    public void StartVolleyRoutine(IEnumerator routine)
+    {
+        StopVolleyRoutine();
+        _volleyRoutine = StartCoroutine(routine);
+    }
+
+    public void StopVolleyRoutine()
+    {
+        if (_volleyRoutine == null)
+            return;
+
+        StopCoroutine(_volleyRoutine);
+        _volleyRoutine = null;
     }
 
     public void MoveToBattle(Transform target, Action onComplete)
@@ -128,8 +144,14 @@ public class ShipView : MonoBehaviour
     public void CompleteMission()
     {
         StopWaitingRoutine();
+        StopVolleyRoutine();
         StopBattleMovement();
         StopWaitingMovement();
         gameObject.SetActive(false);
+    }
+
+    public void Hide()
+    {
+        CompleteMission();
     }
 }

@@ -25,6 +25,7 @@ public class EnemyMap : MonoBehaviour
     private int[] _lastInColumns;
     private int _width;
     private int _height;
+    private int _volleyCursor;
 
     private void Awake()
     {
@@ -180,5 +181,92 @@ public class EnemyMap : MonoBehaviour
 
         // Обновляем индекс до Disable: OnDisable может запустить следующий запрос.
         cell.Cell.Disable();
+    }
+
+    /// <summary>
+    /// Destroys the next active block of the given color, walking the grid with a wrapping cursor
+    /// so consecutive shots do not eat a single row. Blocks buried inside a chain are valid
+    /// targets here, unlike <see cref="TryGetTargetCellIndex"/>.
+    /// </summary>
+    public bool TryDestroyAnyCell(int colorIndex)
+    {
+        if (_cellLinks == null || _cellLinks.Length == 0)
+            return false;
+
+        var total = _cellLinks.Length;
+
+        for (var offset = 0; offset < total; offset++)
+        {
+            var index = (_volleyCursor + offset) % total;
+
+            if (!_cellLinks[index].IsActive || _cellLinks[index].ColorIndex != colorIndex)
+                continue;
+
+            _volleyCursor = (index + 1) % total;
+            var cell = _cellLinks[index].Cell;
+            DestroyCell((cell.X, cell.Y));
+            return true;
+        }
+
+        return false;
+    }
+
+    public int DestroyColor(int colorIndex)
+    {
+        if (_cellLinks == null)
+            return 0;
+
+        var destroyed = 0;
+
+        for (var index = 0; index < _cellLinks.Length; index++)
+        {
+            if (!_cellLinks[index].IsActive || _cellLinks[index].ColorIndex != colorIndex)
+                continue;
+
+            var cell = _cellLinks[index].Cell;
+            DestroyCell((cell.X, cell.Y));
+            destroyed++;
+        }
+
+        return destroyed;
+    }
+
+    public bool TryGetColorIndex(Cell cell, out int colorIndex)
+    {
+        colorIndex = -1;
+
+        if (cell == null || _cellLinks == null)
+            return false;
+
+        if (cell.X < 0 || cell.X >= _width || cell.Y < 0 || cell.Y >= _height)
+            return false;
+
+        var index = cell.Y * _width + cell.X;
+
+        if (!_cellLinks[index].IsActive)
+            return false;
+
+        colorIndex = _cellLinks[index].ColorIndex;
+        return true;
+    }
+
+    public IReadOnlyList<int> GetActiveColors()
+    {
+        var colors = new List<int>();
+
+        if (_cellLinks == null)
+            return colors;
+
+        for (var index = 0; index < _cellLinks.Length; index++)
+        {
+            if (!_cellLinks[index].IsActive)
+                continue;
+
+            var colorIndex = _cellLinks[index].ColorIndex;
+            if (!colors.Contains(colorIndex))
+                colors.Add(colorIndex);
+        }
+
+        return colors;
     }
 }
