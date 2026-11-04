@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d7b682e25af724fd7b8afbf23518607c, type: 3}
   m_Name: EscapeSelectedBooster
   m_EditorClassIdentifier: 
-  _type: 0
   _price: 100
+  _startCount: 3
   _maxCount: 50
   _icon: {fileID: 0}
