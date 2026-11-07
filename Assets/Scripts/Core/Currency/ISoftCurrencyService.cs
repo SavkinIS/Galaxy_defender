@@ -2,7 +2,7 @@ using System;
 
 namespace Core.Currency
 {
-    public interface ISoftCurrencyController
+    public interface ISoftCurrencyService
     {
         int Balance { get; }
 

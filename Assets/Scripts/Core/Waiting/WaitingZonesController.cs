@@ -4,20 +4,21 @@ using System.Linq;
 using UnityEngine;
 using Core;
 using Core.Ad;
+using VContainer;
 
 namespace Core.Waiting
 {
     public class WaitingZonesController : IWaitingZonesController
     {
-        private readonly WaitingZone[] _zones;
-        private readonly IGameSessionHandler _gameSession;
-        private readonly Dictionary<Transform, WaitingZone> _reservations =
+        private WaitingZone[] _zones;
+        private IGameSessionHandler _gameSession;
+        private Dictionary<Transform, WaitingZone> _reservations =
             new Dictionary<Transform, WaitingZone>();
-        private readonly Dictionary<WaitingZoneView, WaitingZone> _viewToZone =
+        private Dictionary<WaitingZoneView, WaitingZone> _viewToZone =
             new Dictionary<WaitingZoneView, WaitingZone>();
-        private readonly int _totalSlots;
-        private readonly AdUnlockZoneOffer _unlockZoneOffer;
-        private readonly AdOverflowOffer _overflowOffer;
+        private int _totalSlots;
+        private AdUnlockZoneOffer _unlockZoneOffer;
+        private AdOverflowOffer _overflowOffer;
 
         public int Capacity => _totalSlots;
 
@@ -60,17 +61,23 @@ namespace Core.Waiting
             }
         }
 
-        public WaitingZonesController(IReadOnlyList<WaitingZoneView> zoneViews,
-            IGameSessionHandler gameSession,
+        [Inject]
+        public void Construct(IGameSessionHandler gameSession,
             GameSessionSettingsSO settings,
-            int requestedSlots = SlotRange.MaximumAllowedSlots,
-            AdUnlockZoneOffer unlockZoneOffer = null,
-            AdOverflowOffer overflowOffer = null)
+            ShipsPuzzle puzzle,
+            AdUnlockZoneOffer unlockZoneOffer,
+            AdOverflowOffer overflowOffer,
+            WaitingZonesHandler waitingZonesHandler)
         {
+            var zoneViews = waitingZonesHandler.Zones;
             _gameSession = gameSession;
             _unlockZoneOffer = unlockZoneOffer;
             _overflowOffer = overflowOffer;
             var zones = new List<WaitingZone>();
+
+            int requestedSlots = puzzle.RequestedWaitingSlots > 0
+                ? puzzle.RequestedWaitingSlots
+                : SlotRange.MaximumAllowedSlots;
 
             int totalViews = zoneViews?.Count ?? 0;
             int slotsToConsider = Mathf.Min(requestedSlots, totalViews);
@@ -145,6 +152,7 @@ namespace Core.Waiting
             }
 
             var lockedZone = _zones.FirstOrDefault(z => z != null && z.IsLocked);
+            
             if (lockedZone == null)
             {
                 onFailed?.Invoke();

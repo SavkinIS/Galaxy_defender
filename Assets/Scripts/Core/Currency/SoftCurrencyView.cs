@@ -1,5 +1,7 @@
+using System;
 using TMPro;
 using UnityEngine;
+using VContainer;
 
 namespace Core.Currency
 {
@@ -8,14 +10,18 @@ namespace Core.Currency
         [SerializeField] private TMP_Text _balanceText;
         [SerializeField] private string _format = "{0}";
 
-        private ISoftCurrencyController _currency;
+        private ISoftCurrencyService _currency;
 
-        public void Init(ISoftCurrencyController currency)
+        [Inject]
+        public void Construct(ISoftCurrencyService currency)
         {
+            _currency = currency;
+        }
+
+        private void Start()
+        {             
             if (_currency != null)
                 _currency.BalanceChanged -= OnBalanceChanged;
-
-            _currency = currency;
 
             if (_currency != null)
                 _currency.BalanceChanged += OnBalanceChanged;

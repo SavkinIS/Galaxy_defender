@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using VContainer;
 
 namespace Core.Ad
 {
@@ -14,18 +15,19 @@ namespace Core.Ad
         [SerializeField] private string _rewardFormat = "Награда: {0}";
         [SerializeField] private Button _finishButton;
         [SerializeField] private Button _doubleButton;
-        [SerializeField] private bool _reloadSceneOnFinish = true;
 
-        private ISoftCurrencyController _currency;
+        private ISoftCurrencyService _currency;
         private int _reward;
         private bool _isDoubled;
         private bool _isShowing;
+        private Action _returnToLobbyCallback;
 
         public event Action Finished;
 
         public bool IsShowing => _isShowing;
 
-        public void Init(ISoftCurrencyController currency)
+        [Inject]
+        public void Construct(ISoftCurrencyService currency)
         {
             _currency = currency;
         }
@@ -42,7 +44,10 @@ namespace Core.Ad
             SetVisible(true);
         }
 
-        
+        public void SetToLobbyCallback(Action callback)
+        {
+            _returnToLobbyCallback = callback;
+        }        
         
         private void Awake()
         {
@@ -87,6 +92,8 @@ namespace Core.Ad
             Grant(_reward);
             RefreshReward();
             RefreshDoubleButton();
+            
+            _returnToLobbyCallback.Invoke();
         }
 
         private void Finish()
@@ -98,18 +105,7 @@ namespace Core.Ad
             SetVisible(false);
             Finished?.Invoke();
 
-            if (_reloadSceneOnFinish)
-                RestartScene();
-        }
-
-        private static void RestartScene()
-        {
-            Scene activeScene = SceneManager.GetActiveScene();
-
-            if (activeScene.buildIndex >= 0)
-                SceneManager.LoadScene(activeScene.buildIndex);
-            else
-                SceneManager.LoadScene(activeScene.name);
+            _returnToLobbyCallback.Invoke();
         }
 
         private void Grant(int amount)

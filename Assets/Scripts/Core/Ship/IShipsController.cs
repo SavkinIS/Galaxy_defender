@@ -21,5 +21,7 @@ namespace Core.Ship
         bool TryGetShip(Transform shipTransform, out Ship ship);
         bool TryForceEscape(ShipView shipView);
         int RemoveParkingShipsByColor(int colorIndex);
+        void MouseClicked(Vector2 screenPosition);
+        void Initialize();
     }
 }

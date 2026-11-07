@@ -15,11 +15,11 @@ namespace Core.Boosts
             new Dictionary<BoosterType, BoosterConfigSO>();
         private readonly Dictionary<BoosterType, int> _counts =
             new Dictionary<BoosterType, int>();
-        private readonly ISoftCurrencyController _currency;
+        private readonly ISoftCurrencyService _currency;
         private IBooster _active;
 
         public BoostersController(IReadOnlyList<BoosterConfigSO> configs,
-            ISoftCurrencyController currency, BoosterContext context)
+            ISoftCurrencyService currency, BoosterContext context)
         {
             _currency = currency;
 

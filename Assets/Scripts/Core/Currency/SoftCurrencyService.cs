@@ -3,16 +3,17 @@ using UnityEngine;
 
 namespace Core.Currency
 {
-    public class SoftCurrencyController : ISoftCurrencyController
+    public class SoftCurrencyService : ISoftCurrencyService
     {
         public const string DefaultBalanceKey = "SoftCurrency.Balance";
 
         private readonly string _balanceKey;
 
-        public SoftCurrencyController(string balanceKey = DefaultBalanceKey)
+        public SoftCurrencyService()
         {
-            _balanceKey = string.IsNullOrEmpty(balanceKey) ? DefaultBalanceKey : balanceKey;
-            Balance = Mathf.Max(0, PlayerPrefs.GetInt(_balanceKey, 0));
+            _balanceKey = DefaultBalanceKey ;
+            Balance = Mathf.Max(0, PlayerPrefs.GetInt(_balanceKey, 99999999));
+
         }
 
         public int Balance { get; private set; }

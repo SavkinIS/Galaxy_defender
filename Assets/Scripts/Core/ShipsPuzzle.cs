@@ -27,7 +27,7 @@ public class ShipsPuzzle : MonoBehaviour
     public List<ShipData> LaunchTape  => _launchTape;
     public Dictionary<ShipData, ShipView> CreatedShips => _parkingGrid.CreatedShips;
     public int RequestedWaitingSlots => GenerationSettings.ResolvedWaitingSlots;
-
+    
     public void ConfigureGeneration(int availableWaitingSlots,
         IReadOnlyList<PathPoint> battlePoints, EnemyCellConnector connector)
     {

@@ -16,12 +16,9 @@ public class BoosterHolder : MonoBehaviour
 
     public BoostersController Controller => _controller;
 
-    public void Init(ISoftCurrencyController currency, IShipsController ships,
+    public void Init(ISoftCurrencyService currency, IShipsController ships,
         IWaitingZonesController waitingZones, EnemyMap enemyMap, GamePauseService pauseService)
     {
-        
-        
-        
         if (_buyPopup == null)
             _buyPopup = FindObjectOfType<BoosterBuyPopup>(true);
 

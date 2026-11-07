@@ -1,4 +1,8 @@
 using System;
+using Core.Ad;
+using Galaxy.Infrastructure.Routing;
+using VContainer;
+using VContainer.Unity;
 
 namespace Core
 {
@@ -9,12 +13,18 @@ namespace Core
         Won
     }
 
-    public class GameSessionHandler : IGameSessionHandler, IDisposable
+    public class GameSessionHandler : IGameSessionHandler, IDisposable, IStartable
     {
-        private readonly GameTimeHandler _gameTimeHandler;
-        private readonly GamePauseService _pauseService;
+        private GameTimeHandler _gameTimeHandler;
+        private GamePauseService _pauseService;
+        private IGlobalRouter _globalRouter;
+        private WinPopup _winPopUp;
+        private GameOverPopup _gameOverPopUp;
+        private ExitButton _exitButton;
 
-        public GameSessionHandler(GameSessionSettingsSO settings, GamePauseService pauseService = null)
+        [Inject]
+        public void Construct(GameSessionSettingsSO settings, GamePauseService pauseService,
+            WinPopup winPopup, IGlobalRouter globalRouter, GameOverPopup gameOverPopup, ExitButton exitButton)
         {
             float parkingEmptyTimeScale = settings != null
                 ? settings.AcceleratedTimeScale
@@ -25,6 +35,11 @@ namespace Core
             _pauseService = pauseService;
             _gameTimeHandler = new GameTimeHandler(parkingEmptyTimeScale, fullBattleTimeScale,
                 _pauseService);
+
+            _globalRouter = globalRouter;
+            _winPopUp = winPopup;
+            _gameOverPopUp = gameOverPopup;
+            _exitButton = exitButton;
         }
 
         public GameSessionState State { get; private set; } = GameSessionState.Running;
@@ -63,6 +78,20 @@ namespace Core
         {
             _gameTimeHandler.Reset();
             _pauseService?.ForceResume();
+        }
+
+        public void Start()
+        {
+            _winPopUp.SetToLobbyCallback(ChangeScene);
+            _gameOverPopUp.SetToLobbyCallback(ChangeScene);
+            _exitButton.SetToLobbyCallback(ChangeScene);
+            
+            Log.Info($"{this.GetType().Name} Started");
+        }
+
+        private void ChangeScene()
+        {
+            _globalRouter.ChangeScene(SceneId.Lobby);
         }
     }
 }
