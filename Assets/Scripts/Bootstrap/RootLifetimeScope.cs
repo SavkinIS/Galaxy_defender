@@ -11,12 +11,16 @@ public class RootLifetimeScope : LifetimeScope
     
     protected override void Configure(IContainerBuilder builder)
     {
-       
         builder.RegisterComponentInNewPrefab(_loadingCurtain, Lifetime.Singleton)
-            .DontDestroyOnLoad();
+            .DontDestroyOnLoad().Build();
         
         builder.Register<GamePauseService>(Lifetime.Singleton);
         builder.Register<SoftCurrencyService>(Lifetime.Singleton).As<ISoftCurrencyService>();
         builder.Register<GlobalRouter>(Lifetime.Singleton).As<IGlobalRouter>();
+        
+        builder.RegisterBuildCallback(container =>
+        {
+            container.Resolve<LoadingCurtain>();
+        });
     }
 }

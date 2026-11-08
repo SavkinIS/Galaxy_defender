@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using Galaxy.Infrastructure.Routing;
 using UnityEngine;
@@ -34,6 +33,9 @@ public class LoadingCurtain : MonoBehaviour
 
    private void OnDisable()
    {
+      if (_globalRouter == null)
+         return;
+      
       _globalRouter.OnSceneStartLoading -= OnSceneStartLoading;
       _globalRouter.OnSceneLoaded -= OnSceneLoaded;
    }

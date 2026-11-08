@@ -25,9 +25,9 @@ namespace Galaxy.Infrastructure.Routing
             
             try
             {
-                await Task.Delay(1000);
-                
                 OnSceneStartLoading?.Invoke();
+                await Task.Delay(1000);
+               
                 AsyncOperation operation = SceneManager.LoadSceneAsync(BuildSettings.GetSceneName(sceneToLoad));
 
                 if (operation == null)

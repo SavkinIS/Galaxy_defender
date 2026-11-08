@@ -797,7 +797,7 @@ MonoBehaviour:
     TypeName: 
   autoRun: 1
   autoInjectGameObjects: []
-  _sceneChanger: {fileID: 1081982369}
+  gameStarter: {fileID: 1081982369}
   _softCurrencyView: {fileID: 1738081428}
 --- !u!4 &2027634331
 Transform:
