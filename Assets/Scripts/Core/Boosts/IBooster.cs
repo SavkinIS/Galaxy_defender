@@ -1,3 +1,4 @@
+using Galaxy.Data.Infrastructure;
 using UnityEngine;
 
 namespace Core.Boosts

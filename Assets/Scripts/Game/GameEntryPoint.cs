@@ -2,16 +2,15 @@ using System;
 using Core;
 using Core.Ad;
 using Core.Boosts;
-using Core.Currency;
 using Core.Ship;
 using Core.Waiting;
+using Galaxy.Infrastructure.Boosters;
 using UnityEngine;
 using VContainer.Unity;
 
 public class GameEntryPoint : IStartable, IDisposable
 {
     private readonly GamePauseService _pauseService;
-    private readonly ISoftCurrencyService _softCurrencyService;
     private readonly IShipsController _shipsController;
     private readonly IWaitingZonesController _waitingZonesController;
     private readonly IGameSessionHandler _sessionHandler;
@@ -25,17 +24,20 @@ public class GameEntryPoint : IStartable, IDisposable
     private readonly EnemyCellConnector _enemyCellConnector;
     private readonly BoosterHolder _boosterHolder;
     private readonly EnemyMap _enemyMap;
-    
-    private BoostersController _boostersController;
+    private readonly IBoosterInventoryService _boosterInventory;
+    private readonly IBoosterPurchaseService _boosterPurchase;
+    private readonly BoosterCatalogSO _boosterCatalog;
 
-    public GameEntryPoint(ISoftCurrencyService currencyService, IShipsController shipsController,
+    private BoosterUsageController _boostersController;
+
+    public GameEntryPoint(IShipsController shipsController,
         IWaitingZonesController waitingZones, IGameSessionHandler sessionHandler, PlayerInput playerInput,
         GameOverPopup gameOverPopup, WinPopup winPopup, GameSessionSettingsSO sessionSettings, ShipsPuzzle puzzle,
         BattleShipMover battleShipMover, EnemyCellConnector enemyCellConnector, BoosterHolder boosterHolder, EnemyMap enemyMap,
-        GamePauseService pauseService)
+        GamePauseService pauseService, IBoosterInventoryService boosterInventory, IBoosterPurchaseService boosterPurchase,
+        BoosterCatalogSO boosterCatalog)
     {
         _shipsController = shipsController;
-        _softCurrencyService = currencyService;
         _waitingZonesController = waitingZones;
         _sessionHandler = sessionHandler;
         _playerInput = playerInput;
@@ -48,7 +50,10 @@ public class GameEntryPoint : IStartable, IDisposable
         _boosterHolder = boosterHolder;
         _enemyMap = enemyMap;
         _pauseService = pauseService;
-        
+        _boosterInventory = boosterInventory;
+        _boosterPurchase = boosterPurchase;
+        _boosterCatalog = boosterCatalog;
+
         Log.Info("GameEntryPoint initialized");
     }
 
@@ -58,25 +63,24 @@ public class GameEntryPoint : IStartable, IDisposable
             _battleShipMover.Points, _enemyCellConnector);
 
         _shipsController.Initialize();
-        
+
         InitBoosters();
-        
+
         Subscribe();
         Log.Info("GameEntryPoint Started");
     }
 
     private void InitBoosters()
     {
-        if (_boosterHolder != null)
-        {
-            _boosterHolder.Init(_softCurrencyService, _shipsController,
-                _waitingZonesController, _enemyMap, _pauseService);
-            
-            _boostersController = _boosterHolder.Controller;
-            _boostersController?.RefreshAll();
-        }
+        if (_boosterHolder == null)
+            return;
+
+        _boosterHolder.Init(_shipsController, _waitingZonesController,
+            _enemyMap, _pauseService, _boosterInventory, _boosterPurchase, _boosterCatalog);
+
+        _boostersController = _boosterHolder.Controller;
+        _boostersController?.RefreshAll();
     }
-    
 
     private void UnSubscribe()
     {
@@ -111,9 +115,8 @@ public class GameEntryPoint : IStartable, IDisposable
         int reward = _sessionSettings != null
             ? _sessionSettings.WinReward
             : GameSessionSettingsSO.DefaultWinReward;
-        
+
         _winPopup?.Show(reward);
-        
     }
 
     public void Dispose()

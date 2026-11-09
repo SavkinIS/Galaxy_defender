@@ -1,4 +1,5 @@
 using System;
+using Galaxy.Data.Infrastructure;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,7 +17,7 @@ namespace Core.Boosts
         [SerializeField] private GameObject _activeRoot;
         [SerializeField, Min(0.05f)] private float _refreshInterval = 0.25f;
 
-        private BoostersController _controller;
+        private BoosterUsageController _controller;
         private float _nextRefreshTime;
 
         public BoosterType Type => _boosterType;
@@ -44,7 +45,7 @@ namespace Core.Boosts
             Refresh();
         }
 
-        public void Init(BoostersController controller)
+        public void Init(BoosterUsageController controller)
         {
             if (_controller != null)
                 _controller.StateChanged -= OnStateChanged;

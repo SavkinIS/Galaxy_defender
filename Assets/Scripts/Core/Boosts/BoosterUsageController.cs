@@ -1,27 +1,34 @@
 using System;
 using System.Collections.Generic;
-using Core.Currency;
+using Galaxy.Data.Infrastructure;
+using Galaxy.Infrastructure.Boosters;
 using UnityEngine;
 
 namespace Core.Boosts
 {
-    public sealed class BoostersController
+    /// <summary>
+    /// Applies booster effects during a game session.
+    /// Stock lives in <see cref="IBoosterInventoryService"/>, purchase in
+    /// <see cref="IBoosterPurchaseService"/>; this class only owns target selection and
+    /// interaction with the current board, so it belongs to the scene scope.
+    /// </summary>
+    public sealed class BoosterUsageController : IDisposable
     {
-        private const string CountKeyFormat = "Booster.{0}.Count";
-
         private readonly Dictionary<BoosterType, IBooster> _boosters =
             new Dictionary<BoosterType, IBooster>();
         private readonly Dictionary<BoosterType, BoosterConfigSO> _configs =
             new Dictionary<BoosterType, BoosterConfigSO>();
-        private readonly Dictionary<BoosterType, int> _counts =
-            new Dictionary<BoosterType, int>();
-        private readonly ISoftCurrencyService _currency;
+        private readonly IBoosterInventoryService _inventory;
+        private readonly IBoosterPurchaseService _purchase;
         private IBooster _active;
 
-        public BoostersController(IReadOnlyList<BoosterConfigSO> configs,
-            ISoftCurrencyService currency, BoosterContext context)
+        public BoosterUsageController(BoosterCatalogSO catalog,
+            IBoosterPurchaseService purchase, BoosterContext context, IBoosterInventoryService inventory)
         {
-            _currency = currency;
+            _purchase = purchase;
+            _inventory = inventory;
+
+            IReadOnlyList<BoosterConfigSO> configs = catalog != null ? catalog.Boosters : null;
 
             if (configs != null)
             {
@@ -45,12 +52,14 @@ namespace Core.Boosts
 
                     _configs[config.Type] = config;
                     _boosters[config.Type] = booster;
-                    _counts[config.Type] = LoadCount(config);
+
+                    if (_inventory != null && !_inventory.TryGet(config.Type, out _))
+                        _inventory.Set(config.Type, config.StartCount);
                 }
             }
 
-            if (_currency != null)
-                _currency.BalanceChanged += OnBalanceChanged;
+            if (_inventory != null)
+                _inventory.Changed += OnInventoryChanged;
         }
 
         public event Action<BoosterType> StateChanged;
@@ -60,7 +69,7 @@ namespace Core.Boosts
 
         public int GetCount(BoosterType type)
         {
-            return _counts.TryGetValue(type, out var count) ? count : 0;
+            return _inventory != null ? _inventory.Get(type) : 0;
         }
 
         public int GetPrice(BoosterType type)
@@ -78,10 +87,6 @@ namespace Core.Boosts
             return _active != null && _active.Type == type;
         }
 
-        /// <summary>
-        /// A booster with stock is clickable when it can be applied; an empty one is clickable
-        /// only when the purchase is affordable.
-        /// </summary>
         public bool CanClick(BoosterType type)
         {
             if (!_boosters.TryGetValue(type, out var booster) || booster == null)
@@ -93,7 +98,7 @@ namespace Core.Boosts
             if (GetCount(type) > 0)
                 return booster.CanApply();
 
-            return _currency != null && _currency.Balance >= GetPrice(type);
+            return _purchase != null && _purchase.CanPurchase(type);
         }
 
         public void Click(BoosterType type)
@@ -132,20 +137,12 @@ namespace Core.Boosts
             Consume(type);
         }
 
-        /// <summary>
-        /// Re-reads the world state for every booster: stock and balance are cached in the views,
-        /// so a board change (a ship parked, a zone filled) must trigger this.
-        /// </summary>
         public void RefreshAll()
         {
             foreach (var type in _boosters.Keys)
                 Notify(type);
         }
 
-        /// <summary>
-        /// Routes a world click to the active booster. Returns true when the click belongs to the
-        /// booster, so ships and zones must not handle it.
-        /// </summary>
         public bool TryHandleWorldClick(Vector2 screenPosition)
         {
             if (_active == null)
@@ -167,20 +164,18 @@ namespace Core.Boosts
 
         public bool TryPurchase(BoosterType type)
         {
-            if (!_configs.TryGetValue(type, out var config) || config == null)
-                return false;
+            return _purchase != null && _purchase.TryPurchase(type);
+        }
 
-            if (_currency == null || _currency.Balance < config.Price)
-                return false;
+        public void Dispose()
+        {
+            if (_inventory != null)
+                _inventory.Changed -= OnInventoryChanged;
+        }
 
-            if (GetCount(type) >= config.MaxCount)
-                return false;
-
-            if (!_currency.TrySpend(config.Price))
-                return false;
-
-            SetCount(type, Mathf.Min(config.MaxCount, GetCount(type) + 1));
-            return true;
+        private void OnInventoryChanged(BoosterType type, int count)
+        {
+            Notify(type);
         }
 
         private void DeactivateActive()
@@ -196,43 +191,15 @@ namespace Core.Boosts
 
         private void Consume(BoosterType type)
         {
-            SetCount(type, Mathf.Max(0, GetCount(type) - 1));
-        }
+            if (_inventory != null)
+                _inventory.TryConsume(type);
 
-        private void SetCount(BoosterType type, int count)
-        {
-            _counts[type] = count;
-            PlayerPrefs.SetInt(CountKey(type), count);
-            PlayerPrefs.Save();
             Notify(type);
         }
 
         private void Notify(BoosterType type)
         {
             StateChanged?.Invoke(type);
-        }
-
-        private void OnBalanceChanged(int balance)
-        {
-            foreach (var type in _boosters.Keys)
-                Notify(type);
-        }
-
-        private static string CountKey(BoosterType type)
-        {
-            return string.Format(CountKeyFormat, type);
-        }
-
-        private static int LoadCount(BoosterConfigSO config)
-        {
-            // First launch has no saved value: hand out the configured starter stock, so every
-            // booster can be tried before the player pays for the next one.
-            var stored = PlayerPrefs.GetInt(CountKey(config.Type), -1);
-
-            if (stored < 0)
-                return config.StartCount;
-
-            return Mathf.Clamp(stored, 0, config.MaxCount);
         }
     }
 }

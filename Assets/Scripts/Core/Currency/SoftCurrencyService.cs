@@ -5,18 +5,14 @@ namespace Core.Currency
 {
     public class SoftCurrencyService : ISoftCurrencyService
     {
-        public const string DefaultBalanceKey = "SoftCurrency.Balance";
+        private readonly ISaveService _saveService;
 
-        private readonly string _balanceKey;
-
-        public SoftCurrencyService()
+        public SoftCurrencyService(ISaveService saveService)
         {
-            _balanceKey = DefaultBalanceKey ;
-            Balance = Mathf.Max(0, PlayerPrefs.GetInt(_balanceKey, 99999999));
-
+            _saveService = saveService;
         }
 
-        public int Balance { get; private set; }
+        public int Balance => _saveService.GetSaveData().SoftValue;
 
         public event Action<int> BalanceChanged;
 
@@ -43,9 +39,9 @@ namespace Core.Currency
             if (clamped == Balance)
                 return;
 
-            Balance = clamped;
-            PlayerPrefs.SetInt(_balanceKey, Balance);
-            PlayerPrefs.Save();
+            _saveService.GetSaveData().SoftValue = clamped;
+            _saveService.Save();
+            
             BalanceChanged?.Invoke(Balance);
         }
     }

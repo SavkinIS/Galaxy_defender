@@ -1,4 +1,4 @@
-namespace Core.Boosts
+namespace Galaxy.Data.Infrastructure
 {
     public enum BoosterType
     {

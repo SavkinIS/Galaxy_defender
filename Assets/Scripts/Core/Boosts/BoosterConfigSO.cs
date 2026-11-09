@@ -1,3 +1,4 @@
+using Galaxy.Data.Infrastructure;
 using UnityEngine;
 
 namespace Core.Boosts
@@ -9,10 +10,6 @@ namespace Core.Boosts
         [SerializeField, Min(1)] private int _maxCount = 3;
         [SerializeField] private Sprite _icon;
 
-        /// <summary>
-        /// Taken from the config class, not from a serialized field: a field left at its default
-        /// value silently collapsed every booster into the same entry.
-        /// </summary>
         public abstract BoosterType Type { get; }
 
         public int Price => Mathf.Max(0, _price);

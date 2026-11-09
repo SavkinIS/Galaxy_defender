@@ -9,29 +9,22 @@ namespace Galaxy.Bootstrap
     {
         private readonly IGlobalRouter _globalRouter;
         private readonly IPlatformService _platformService;
+        private readonly ISaveService _saveServce;
 
-        public BootEntryPoint(IGlobalRouter globalRouter, IPlatformService platformService)
+        public BootEntryPoint(IGlobalRouter globalRouter, IPlatformService platformService, ISaveService saveService)
         {
             _globalRouter = globalRouter;
             _platformService = platformService;
+            _saveServce = saveService;
         }
     
         public void Start()
         {
-            _globalRouter.OnSceneLoaded += OnSceneLoaded;
+            _saveServce.Load();
             _platformService.Ready += ChangeScene;
             
             if (_platformService.IsReady)
                 ChangeScene();
-        }
-
-        private void OnSceneLoaded(bool success)
-        {
-            if (success == false)
-                return;
-            
-            _globalRouter.OnSceneLoaded -= OnSceneLoaded;
-            _platformService.NotifyGameReady();
         }
 
         private void ChangeScene()
@@ -48,7 +41,6 @@ namespace Galaxy.Bootstrap
         public void Dispose()
         {
             _platformService.Ready -= ChangeScene;
-            _globalRouter.OnSceneLoaded -= OnSceneLoaded;
         }
     }
 }

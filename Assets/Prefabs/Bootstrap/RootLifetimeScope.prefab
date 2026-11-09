@@ -49,3 +49,4 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects: []
   _loadingCurtain: {fileID: 1870594303977629252, guid: d145d531901dc403daabe6413438896f, type: 3}
+  _boosterCatalog: {fileID: 11400000, guid: 2ff066b8f25ab44d098f9cea076a61d6, type: 2}

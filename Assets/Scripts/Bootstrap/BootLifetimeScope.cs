@@ -7,8 +7,6 @@ namespace Galaxy.Bootstrap
     {
         protected override void Configure(IContainerBuilder builder)
         {
-            new PlatformInstaller().Install(builder);
-            
             builder.RegisterEntryPoint<BootEntryPoint>();
         }
     }
