@@ -1,6 +1,7 @@
 using Core;
 using Core.Boosts;
 using Core.Currency;
+using Core.Store;
 using Galaxy.Bootstrap;
 using Galaxy.Infrastructure.Boosters;
 using Galaxy.Infrastructure.Platform;
@@ -13,6 +14,7 @@ public class RootLifetimeScope : LifetimeScope
 {
     [SerializeField] private LoadingCurtain _loadingCurtain;
     [SerializeField] private BoosterCatalogSO _boosterCatalog;
+    [SerializeField] private StoreCatalogSO _storeCatalog;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -29,6 +31,7 @@ public class RootLifetimeScope : LifetimeScope
         builder.Register<BoosterInventoryService>(Lifetime.Singleton).AsSelf().As<IBoosterInventoryService>();
 
         RegisterBoosterCatalog(builder);
+        RegisterStore(builder);
 
         builder.Register<BoosterPurchaseService>(Lifetime.Singleton).AsSelf().As<IBoosterPurchaseService>();
 
@@ -66,5 +69,29 @@ public class RootLifetimeScope : LifetimeScope
         }
 
         builder.RegisterInstance(catalog);
+    }
+
+    private void RegisterStore(IContainerBuilder builder)
+    {
+        StoreCatalogSO catalog = _storeCatalog != null
+            ? _storeCatalog
+            : Resources.Load<StoreCatalogSO>("StoreCatalog");
+
+        if (catalog == null)
+        {
+            Log.Error("[RootLifetimeScope] StoreCatalogSO is missing. Assign it in the inspector " +
+                      "or place the asset at Assets/Resources/StoreCatalog.asset");
+            catalog = ScriptableObject.CreateInstance<StoreCatalogSO>();
+        }
+
+        builder.RegisterInstance(catalog);
+
+#if Payments_yg
+        builder.Register<YandexStorePlatform>(Lifetime.Singleton).AsSelf().As<IStorePlatform>();
+#else
+        builder.Register<EditorStorePlatform>(Lifetime.Singleton).AsSelf().As<IStorePlatform>();
+#endif
+
+        builder.Register<StorePurchaseService>(Lifetime.Singleton).AsSelf().As<IStorePurchaseService>();
     }
 }

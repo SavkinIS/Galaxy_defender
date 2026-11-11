@@ -1,51 +1,61 @@
 using System;
+using System.Collections.Generic;
 using Core.Currency;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Galaxy.Lobby.Screens
 {
+    
     public class ShopScreen : MonoBehaviour
     {
         [SerializeField] private CanvasGroup _canvasGroup;
         [SerializeField] private Button _toMainMenuBtn;
         [SerializeField] private SoftCurrencyView _softCurrencyView;
-        
-        public SoftCurrencyView SoftCurrencyView=> _softCurrencyView;
-        
-        private Action _toMainMenu;
+        [SerializeField] private List<ShopItemView> _items = new List<ShopItemView>();
+        [SerializeField] private List<ShopOfferItemView> _offers = new List<ShopOfferItemView>();
 
-        public void OnEnable()
+        public SoftCurrencyView SoftCurrencyView => _softCurrencyView;
+
+        public IReadOnlyList<ShopItemView> Items => _items;
+
+        public IReadOnlyList<ShopOfferItemView> Offers => _offers;
+
+        public event Action BackRequested;
+
+        private void OnEnable()
         {
-            _toMainMenuBtn.onClick.AddListener(ToMainMenu);
-        }
-        
-        public void OnDisable()
-        {
-            _toMainMenuBtn.onClick.RemoveAllListeners();
+            if (_toMainMenuBtn != null)
+                _toMainMenuBtn.onClick.AddListener(ToMainMenu);
         }
 
-        public void Initialize(Action toMainMenu)
+        private void OnDisable()
         {
-            _toMainMenu = toMainMenu;
+            if (_toMainMenuBtn != null)
+                _toMainMenuBtn.onClick.RemoveListener(ToMainMenu);
+        }
+
+        public void Initialize()
+        {
             gameObject.SetActive(false);
         }
-        
+
         public void Show()
         {
             gameObject.SetActive(true);
-            _canvasGroup.alpha = 1f;
+
+            if (_canvasGroup != null)
+                _canvasGroup.alpha = 1f;
         }
-        
+
         public void Hide()
         {
-            _canvasGroup.alpha = 0f;
+            if (_canvasGroup != null)
+                _canvasGroup.alpha = 0f;
+
             gameObject.SetActive(false);
         }
-        
-        private void ToMainMenu()
-        {
-            _toMainMenu?.Invoke();
-        }
+
+        private void ToMainMenu() => BackRequested?.Invoke();
     }
 }

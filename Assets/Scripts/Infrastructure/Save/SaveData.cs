@@ -5,7 +5,7 @@ using Galaxy.Data.Infrastructure;
 [Serializable]
 public class SaveData
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
     public int Version = CurrentVersion;
     public int Level = 1;
     public int SoftValue;
@@ -17,4 +17,8 @@ public class SaveData
     public float MusicVolume = 1f;
     public float SfxVolume = 1f;
     public string Language = "";
+
+    // Paid content
+    public bool NoAds;
+    public List<string> PurchasedProducts = new();
 }
