@@ -1,3 +1,5 @@
+using Galaxy.Game.Ship;
+
 namespace Core.Ship.States
 {
     public class WaitingState : IShipState

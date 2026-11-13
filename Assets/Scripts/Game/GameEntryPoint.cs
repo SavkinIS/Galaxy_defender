@@ -4,124 +4,131 @@ using Core.Ad;
 using Core.Boosts;
 using Core.Ship;
 using Core.Waiting;
+using Galaxy.Game.Ship;
 using Galaxy.Infrastructure.Boosters;
 using UnityEngine;
 using VContainer.Unity;
 
-public class GameEntryPoint : IStartable, IDisposable
+namespace Galaxy.Game
 {
-    private readonly GamePauseService _pauseService;
-    private readonly IShipsController _shipsController;
-    private readonly IWaitingZonesController _waitingZonesController;
-    private readonly IGameSessionHandler _sessionHandler;
-    private readonly PlayerInput _playerInput;
-    private readonly GameOverPopup _gameOverPopup;
 
-    private readonly WinPopup _winPopup;
-    private readonly GameSessionSettingsSO _sessionSettings;
-    private readonly ShipsPuzzle _puzzle;
-    private readonly BattleShipMover _battleShipMover;
-    private readonly EnemyCellConnector _enemyCellConnector;
-    private readonly BoosterHolder _boosterHolder;
-    private readonly EnemyMap _enemyMap;
-    private readonly IBoosterInventoryService _boosterInventory;
-    private readonly IBoosterPurchaseService _boosterPurchase;
-    private readonly BoosterCatalogSO _boosterCatalog;
-
-    private BoosterUsageController _boostersController;
-
-    public GameEntryPoint(IShipsController shipsController,
-        IWaitingZonesController waitingZones, IGameSessionHandler sessionHandler, PlayerInput playerInput,
-        GameOverPopup gameOverPopup, WinPopup winPopup, GameSessionSettingsSO sessionSettings, ShipsPuzzle puzzle,
-        BattleShipMover battleShipMover, EnemyCellConnector enemyCellConnector, BoosterHolder boosterHolder, EnemyMap enemyMap,
-        GamePauseService pauseService, IBoosterInventoryService boosterInventory, IBoosterPurchaseService boosterPurchase,
-        BoosterCatalogSO boosterCatalog)
+    public class GameEntryPoint : IStartable, IDisposable
     {
-        _shipsController = shipsController;
-        _waitingZonesController = waitingZones;
-        _sessionHandler = sessionHandler;
-        _playerInput = playerInput;
-        _gameOverPopup = gameOverPopup;
-        _winPopup = winPopup;
-        _sessionSettings = sessionSettings;
-        _puzzle = puzzle;
-        _battleShipMover = battleShipMover;
-        _enemyCellConnector = enemyCellConnector;
-        _boosterHolder = boosterHolder;
-        _enemyMap = enemyMap;
-        _pauseService = pauseService;
-        _boosterInventory = boosterInventory;
-        _boosterPurchase = boosterPurchase;
-        _boosterCatalog = boosterCatalog;
+        private readonly GamePauseService _pauseService;
+        private readonly IShipsController _shipsController;
+        private readonly IWaitingZonesController _waitingZonesController;
+        private readonly IGameSessionHandler _sessionHandler;
+        private readonly PlayerInput _playerInput;
+        private readonly GameOverPopup _gameOverPopup;
 
-        Log.Info("GameEntryPoint initialized");
-    }
+        private readonly WinPopup _winPopup;
+        private readonly GameSessionSettingsSO _sessionSettings;
+        private readonly ShipsPuzzle _puzzle;
+        private readonly BattleShipMover _battleShipMover;
+        private readonly EnemyCellConnector _enemyCellConnector;
+        private readonly BoosterHolder _boosterHolder;
+        private readonly EnemyMap _enemyMap;
+        private readonly IBoosterInventoryService _boosterInventory;
+        private readonly IBoosterPurchaseService _boosterPurchase;
+        private readonly BoosterCatalogSO _boosterCatalog;
 
-    public void Start()
-    {
-        _puzzle.ConfigureGeneration(_waitingZonesController.Capacity,
-            _battleShipMover.Points, _enemyCellConnector);
+        private BoosterUsageController _boostersController;
 
-        _shipsController.Initialize();
+        public GameEntryPoint(IShipsController shipsController,
+            IWaitingZonesController waitingZones, IGameSessionHandler sessionHandler, PlayerInput playerInput,
+            GameOverPopup gameOverPopup, WinPopup winPopup, GameSessionSettingsSO sessionSettings, ShipsPuzzle puzzle,
+            BattleShipMover battleShipMover, EnemyCellConnector enemyCellConnector, BoosterHolder boosterHolder,
+            EnemyMap enemyMap,
+            GamePauseService pauseService, IBoosterInventoryService boosterInventory,
+            IBoosterPurchaseService boosterPurchase,
+            BoosterCatalogSO boosterCatalog)
+        {
+            _shipsController = shipsController;
+            _waitingZonesController = waitingZones;
+            _sessionHandler = sessionHandler;
+            _playerInput = playerInput;
+            _gameOverPopup = gameOverPopup;
+            _winPopup = winPopup;
+            _sessionSettings = sessionSettings;
+            _puzzle = puzzle;
+            _battleShipMover = battleShipMover;
+            _enemyCellConnector = enemyCellConnector;
+            _boosterHolder = boosterHolder;
+            _enemyMap = enemyMap;
+            _pauseService = pauseService;
+            _boosterInventory = boosterInventory;
+            _boosterPurchase = boosterPurchase;
+            _boosterCatalog = boosterCatalog;
 
-        InitBoosters();
+            Log.Info("GameEntryPoint initialized");
+        }
 
-        Subscribe();
-        Log.Info("GameEntryPoint Started");
-    }
+        public void Start()
+        {
+            _puzzle.ConfigureGeneration(_waitingZonesController.Capacity,
+                _battleShipMover.Points, _enemyCellConnector);
 
-    private void InitBoosters()
-    {
-        if (_boosterHolder == null)
-            return;
+            _shipsController.Initialize();
 
-        _boosterHolder.Init(_shipsController, _waitingZonesController,
-            _enemyMap, _pauseService, _boosterInventory, _boosterPurchase, _boosterCatalog);
+            InitBoosters();
 
-        _boostersController = _boosterHolder.Controller;
-        _boostersController?.RefreshAll();
-    }
+            Subscribe();
+            Log.Info("GameEntryPoint Started");
+        }
 
-    private void UnSubscribe()
-    {
-        _playerInput.MouseClicked -= OnMouseClicked;
-        _sessionHandler.WaitingZoneOverflow -= OnWaitingZoneOverflow;
-        _sessionHandler.BattleCompleted -= OnBattleCompleted;
-    }
+        private void InitBoosters()
+        {
+            if (_boosterHolder == null)
+                return;
 
-    private void Subscribe()
-    {
-        _playerInput.MouseClicked += OnMouseClicked;
-        _sessionHandler.WaitingZoneOverflow += OnWaitingZoneOverflow;
-        _sessionHandler.BattleCompleted += OnBattleCompleted;
-    }
+            _boosterHolder.Init(_shipsController, _waitingZonesController,
+                _enemyMap, _pauseService, _boosterInventory, _boosterPurchase, _boosterCatalog);
 
-    private void OnMouseClicked(Vector2 screenPosition)
-    {
-        if (_boostersController != null && _boostersController.TryHandleWorldClick(screenPosition))
-            return;
+            _boostersController = _boosterHolder.Controller;
+            _boostersController?.RefreshAll();
+        }
 
-        _shipsController?.MouseClicked(screenPosition);
-        _waitingZonesController?.MouseClicked(screenPosition);
-    }
+        private void UnSubscribe()
+        {
+            _playerInput.MouseClicked -= OnMouseClicked;
+            _sessionHandler.WaitingZoneOverflow -= OnWaitingZoneOverflow;
+            _sessionHandler.BattleCompleted -= OnBattleCompleted;
+        }
 
-    private void OnWaitingZoneOverflow()
-    {
-        _gameOverPopup?.Show();
-    }
+        private void Subscribe()
+        {
+            _playerInput.MouseClicked += OnMouseClicked;
+            _sessionHandler.WaitingZoneOverflow += OnWaitingZoneOverflow;
+            _sessionHandler.BattleCompleted += OnBattleCompleted;
+        }
 
-    private void OnBattleCompleted()
-    {
-        int reward = _sessionSettings != null
-            ? _sessionSettings.WinReward
-            : GameSessionSettingsSO.DefaultWinReward;
+        private void OnMouseClicked(Vector2 screenPosition)
+        {
+            if (_boostersController != null && _boostersController.TryHandleWorldClick(screenPosition))
+                return;
 
-        _winPopup?.Show(reward);
-    }
+            _shipsController?.MouseClicked(screenPosition);
+            _waitingZonesController?.MouseClicked(screenPosition);
+        }
 
-    public void Dispose()
-    {
-        UnSubscribe();
-        Log.Info("GameEntryPoint Dispose");
+        private void OnWaitingZoneOverflow()
+        {
+            _gameOverPopup?.Show();
+        }
+
+        private void OnBattleCompleted()
+        {
+            int reward = _sessionSettings != null
+                ? _sessionSettings.WinReward
+                : GameSessionSettingsSO.DefaultWinReward;
+
+            _winPopup?.Show(reward);
+        }
+
+        public void Dispose()
+        {
+            UnSubscribe();
+            Log.Info("GameEntryPoint Dispose");
+        }
     }
 }

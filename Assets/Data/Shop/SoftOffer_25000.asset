@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f78bc3b1bbec474e94861bf237e4791, type: 3}
+  m_Name: SoftOffer_25000
+  m_EditorClassIdentifier: 
+  _productId: soft_25000
+  _repeatable: 1
+  _title: Offer
+  _description: 
+  _icon: {fileID: 0}
+  _badge: 
+  _fallbackPrice: 200
+  _softAmount: 25000
+  _boosters:
+  - Type: 0
+    Count: 2
+  _grantNoAds: 0

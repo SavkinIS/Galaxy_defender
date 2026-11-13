@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Core.Waiting;
+using Galaxy.Game.Ship;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;

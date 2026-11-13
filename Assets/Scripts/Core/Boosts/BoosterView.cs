@@ -11,7 +11,7 @@ namespace Core.Boosts
         [SerializeField] private Button _button;
         [SerializeField] private GameObject _countRoot;
         [SerializeField] private TMPro.TextMeshProUGUI _countText;
-        [SerializeField] private TMPro.TextMeshProUGUI _nameText;
+        //[SerializeField] private TMPro.TextMeshProUGUI _nameText;
         [SerializeField] private GameObject _priceRoot;
         [SerializeField] private TMPro.TextMeshProUGUI _priceText;
         [SerializeField] private GameObject _activeRoot;
@@ -24,15 +24,9 @@ namespace Core.Boosts
 
         private void Awake()
         {
-            if (_nameText != null)
-                _nameText.text = Type.ToString();
+           
         }
 
-        /// <summary>
-        /// The available stock is not the only thing a booster depends on: ships get parked, zones
-        /// get filled and the balance changes. A cheap unscaled poll keeps the button honest
-        /// without wiring an event into every game system.
-        /// </summary>
         private void Update()
         {
             if (_controller == null)
@@ -105,7 +99,7 @@ namespace Core.Boosts
                 _priceText.text = _controller.GetPrice(_boosterType).ToString();
 
             if (_activeRoot != null)
-                _activeRoot.SetActive(_controller.IsWaitingTarget(_boosterType));
+                _activeRoot.SetActive(_controller.IsWaitingTarget(_boosterType) && _controller.CanClick(_boosterType));
 
             if (_button != null)
                 _button.interactable = _controller.CanClick(_boosterType);

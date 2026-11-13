@@ -107,7 +107,7 @@ namespace YG.EditorScr
         /// </summary>
         public static void WriteAllText(string path, string content, int retryCount = 5, int delayMs = 50)
         {
-            string directory =  System.IO.Path.GetDirectoryName(path);
+            string directory = Path.GetDirectoryName(path);
             if (!Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 

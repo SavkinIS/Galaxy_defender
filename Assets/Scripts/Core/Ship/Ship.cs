@@ -1,5 +1,6 @@
 using System;
 using Core.Ship.States;
+using Galaxy.Game.Ship;
 using UnityEngine;
 
 namespace Core.Ship

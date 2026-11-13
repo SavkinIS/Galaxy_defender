@@ -1,5 +1,6 @@
 #if Payments_yg
 using System;
+using YG;
 
 namespace Core.Store
 {
@@ -53,7 +54,7 @@ namespace Core.Store
             }
 
             _pending = onComplete;
-            YG2.Purchase(offer.ProductId);
+            YG2.PurchaseByID(offer.ProductId);
         }
 
         public void Dispose()

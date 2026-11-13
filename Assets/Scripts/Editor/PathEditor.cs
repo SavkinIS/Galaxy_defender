@@ -1,3 +1,4 @@
+using Galaxy.Game.Ship;
 using UnityEditor;
 using UnityEngine;
 

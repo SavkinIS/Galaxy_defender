@@ -33,8 +33,8 @@ namespace YG.EditorScr
             if (string.IsNullOrEmpty(assetPath))
                 return;
 
-            string folderPath =  System.IO.Path.GetDirectoryName(assetPath);
-            string moduleName =  System.IO.Path.GetFileName(folderPath);
+            string folderPath = Path.GetDirectoryName(assetPath);
+            string moduleName = Path.GetFileName(folderPath);
 
             // Меняем поле через SerializedObject, но НЕ сохраняем и НЕ рефрешим отсюда
             serializedObject.UpdateIfRequiredOrScript();
@@ -95,19 +95,19 @@ namespace YG.EditorScr
 
         public static string GetIconCurrentPlatformPath(string modulName)
         {
-            string iconPath =  System.IO.Path.Combine(InfoYG.PATCH_PC_WEBGLTEMPLATES, modulName, "thumbnail.png");
+            string iconPath = Path.Combine(InfoYG.PATCH_PC_WEBGLTEMPLATES, modulName, "thumbnail.png");
             if (File.Exists(iconPath))
                 return iconPath;
 
-            iconPath =  System.IO.Path.Combine(InfoYG.PATCH_PC_WEBGLTEMPLATES, modulName + "Integration", "thumbnail.png");
+            iconPath = Path.Combine(InfoYG.PATCH_PC_WEBGLTEMPLATES, modulName + "Integration", "thumbnail.png");
             if (File.Exists(iconPath))
                 return iconPath;
 
-            iconPath =  System.IO.Path.Combine(InfoYG.PATCH_PC_PLATFORMS, modulName, "Editor", "thumbnail.png");
+            iconPath = Path.Combine(InfoYG.PATCH_PC_PLATFORMS, modulName, "Editor", "thumbnail.png");
             if (File.Exists(iconPath))
                 return iconPath;
 
-            iconPath =  System.IO.Path.Combine(InfoYG.PATCH_PC_PLATFORMS, modulName + "Integration", "Editor", "thumbnail.png");
+            iconPath = Path.Combine(InfoYG.PATCH_PC_PLATFORMS, modulName + "Integration", "Editor", "thumbnail.png");
             if (File.Exists(iconPath))
                 return iconPath;
 
@@ -244,9 +244,14 @@ namespace YG.EditorScr
                         }
 
                         EditorGUI.BeginDisabledGroup(!newToggleValue);
-                        EditorGUILayout.LabelField(ObjectNames.NicifyVariableName(field.Name), GUILayout.Width(180));
-                        GUILayout.FlexibleSpace();
-                        DrawField(field, scrObject);
+
+                        EditorGUILayout.LabelField(
+                            ObjectNames.NicifyVariableName(field.Name),
+                            GUILayout.Width(200)
+                        );
+
+                        DrawField(field, scrObject, GUILayout.ExpandWidth(true));
+
                         EditorGUI.EndDisabledGroup();
 
                         EditorGUILayout.EndHorizontal();
@@ -259,39 +264,46 @@ namespace YG.EditorScr
                 if (!isToggle)
                 {
                     EditorGUILayout.BeginHorizontal(YGEditorStyles.selectable);
-                    EditorGUILayout.LabelField(ObjectNames.NicifyVariableName(field.Name), GUILayout.Width(200));
-                    GUILayout.FlexibleSpace();
-                    DrawField(field, scrObject);
+
+                    EditorGUILayout.LabelField(
+                        ObjectNames.NicifyVariableName(field.Name),
+                        GUILayout.Width(200)
+                    );
+
+                    DrawField(field, scrObject, GUILayout.ExpandWidth(true));
+
                     EditorGUILayout.EndHorizontal();
                 }
             }
         }
 
-        private void DrawField(FieldInfo field, object target)
+        private void DrawField(FieldInfo field, object target, params GUILayoutOption[] options)
         {
             object value = field.GetValue(target);
 
-            GUILayoutOption valueWidth = GUILayout.Width(120);
+            // Если опции не передали, по умолчанию растягиваем поле
+            if (options == null || options.Length == 0)
+                options = new GUILayoutOption[] { GUILayout.ExpandWidth(true) };
 
             if (field.FieldType == typeof(bool))
             {
-                field.SetValue(target, EditorGUILayout.Toggle((bool)value, valueWidth));
+                field.SetValue(target, EditorGUILayout.Toggle((bool)value, options));
             }
             else if (field.FieldType == typeof(string))
             {
-                field.SetValue(target, EditorGUILayout.TextField((string)value, valueWidth));
+                field.SetValue(target, EditorGUILayout.TextField((string)value, options));
             }
             else if (field.FieldType == typeof(int))
             {
-                field.SetValue(target, EditorGUILayout.IntField((int)value, valueWidth));
+                field.SetValue(target, EditorGUILayout.IntField((int)value, options));
             }
             else if (field.FieldType == typeof(float))
             {
-                field.SetValue(target, EditorGUILayout.FloatField((float)value, valueWidth));
+                field.SetValue(target, EditorGUILayout.FloatField((float)value, options));
             }
             else if (field.FieldType.IsEnum)
             {
-                field.SetValue(target, EditorGUILayout.EnumPopup((Enum)value, valueWidth));
+                field.SetValue(target, EditorGUILayout.EnumPopup((Enum)value, options));
             }
             else
             {

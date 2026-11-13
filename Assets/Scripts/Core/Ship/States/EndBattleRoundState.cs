@@ -1,3 +1,4 @@
+using Galaxy.Game.Ship;
 using UnityEngine;
 
 namespace Core.Ship.States

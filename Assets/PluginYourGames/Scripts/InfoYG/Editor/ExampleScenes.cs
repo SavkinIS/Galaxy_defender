@@ -146,7 +146,7 @@ namespace YG.EditorScr
                     continue;
 
                 string[] files = Directory.GetFiles(dir);
-                IEnumerable<string> sceneFiles = files.Where(file =>  System.IO.Path.GetExtension(file).Equals(".unity", System.StringComparison.OrdinalIgnoreCase));
+                IEnumerable<string> sceneFiles = files.Where(file => Path.GetExtension(file).Equals(".unity", System.StringComparison.OrdinalIgnoreCase));
                 List<string> sceneList = sceneFiles.ToList();
 
                 for (int i = 0; i < sceneList.Count; i++)

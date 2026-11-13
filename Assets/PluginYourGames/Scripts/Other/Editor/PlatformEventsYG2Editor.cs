@@ -23,7 +23,7 @@ namespace YG.EditorScr
             unityEvents = serializedObject.FindProperty("platformAction");
             executeMode = serializedObject.FindProperty("executeMode");
 #if RU_YG2
-            m_AddButonContent = EditorGUIUtility.TrTextContent("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
+            m_AddButonContent = EditorGUIUtility.TrTextContent("Добавить платформу");
 #else
             m_AddButonContent = EditorGUIUtility.TrTextContent("Add platform");
 #endif
@@ -50,8 +50,8 @@ namespace YG.EditorScr
                     if (filesSearchScr[f].Contains("Version.txt") || filesSearchScr[f].Contains(".meta"))
                         continue;
 
-                    string folder =  System.IO.Path.GetFileName(pathesPlatform[i]);
-                    string file =  System.IO.Path.GetFileName(filesSearchScr[f]);
+                    string folder = Path.GetFileName(pathesPlatform[i]);
+                    string file = Path.GetFileName(filesSearchScr[f]);
                     string path = $"{InfoYG.PATCH_ASSETS_PLATFORMS}/{folder}/{file}";
 
                     PlatformSettings platform = AssetDatabase.LoadAssetAtPath<PlatformSettings>(path);
@@ -81,26 +81,26 @@ namespace YG.EditorScr
 
             string descript;
 #if RU_YG2
-            descript = "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ";
+            descript = "Список выбранных платформ";
 #else
             descript = "List of selected platforms";
 #endif
             EditorGUILayout.PropertyField(platforms, new GUIContent(descript), true);
             EditorGUILayout.Space(10);
 #if RU_YG2
-            descript = "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ";
+            descript = "Способ выполнения";
 #else
             descript = "Execution mede";
 #endif
             EditorGUILayout.PropertyField(executeMode, new GUIContent(descript), true);
 #if RU_YG2
-            descript = "пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)";
+            descript = "Триггер (когда выполнить)";
 #else
             descript = "Trigger (when to Execute)";
 #endif
             EditorGUILayout.PropertyField(whenToEvent, new GUIContent(descript), true);
 #if RU_YG2
-            descript = "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ:";
+            descript = "Выполнить:";
 #else
             descript = "To perform:";
 #endif
@@ -116,7 +116,7 @@ namespace YG.EditorScr
                 if (targetObject.name == ((PlatformEventsYG2)target).gameObject.name && methodName == "DeactivateGameObject")
                 {
 #if RU_YG2
-                    descript = "пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ";
+                    descript = "По умолчанию привязан метод деактивации объекта";
 #else
                     descript = "By default, the deactivation method of object is linked";
 #endif

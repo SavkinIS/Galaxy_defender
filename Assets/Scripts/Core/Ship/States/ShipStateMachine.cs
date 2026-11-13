@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Galaxy.Game.Ship;
 
 namespace Core.Ship.States
 {

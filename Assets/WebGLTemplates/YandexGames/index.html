@@ -18,6 +18,7 @@
             padding: 0;
             margin: 0;
             overflow: hidden;
+            overscroll-behavior: none;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             -khtml-user-select: none;
@@ -107,6 +108,7 @@
         let ygGameInstance = null;
         let ysdk = null;
         let initYSDK = false;
+        let initSDKMessageSent = false;
         let initGame = false;
         let syncInit = false;
         let isVisibility = true;
@@ -118,11 +120,13 @@
         window.addEventListener('blur', () => SetVisibility(false));
         window.addEventListener('focus', () => SetVisibility(true));
 
-
         window.addEventListener('pointerdown', () => {
             FocusGame();
             SetVisibility(true);
         });
+
+        window.addEventListener('resize', () => FocusGame());
+        document.addEventListener('fullscreenchange', () => FocusGame());
 
         const oRequestPointerLock = Element.prototype.requestPointerLock;
         Element.prototype.requestPointerLock = async function hkRequestPointerLock(...args) {
@@ -165,8 +169,22 @@
             window.blurFocusHandlersInstalled = true;
         }
 
-        function FocusGame() {
-            if (!isPausedGame) canvas.focus();
+        function FocusGame(checkingPauseStatus = true) {
+            if (!canvas) return;
+
+            requestAnimationFrame(() => {
+                if (checkingPauseStatus && isPausedGame) return;
+
+                const active = document.activeElement;
+                if (active && (active.tagName === 'INPUT' ||
+                    active.tagName === 'TEXTAREA' ||
+                    active.isContentEditable
+                )) {
+                    return;
+                }
+
+                canvas.focus({ preventScroll: true });
+            });
         }
 
         function SetVisibility(visibility) {
@@ -189,6 +207,7 @@
         const ResumeCallback = () => {
             isPausedGame = false;
             YG2Instance('SetPauseGame', 'false');
+            FocusGame();
         };
 
         const script = document.createElement("script");
@@ -202,8 +221,11 @@
                     progressBarFull.style.width = `${100 * adjustedProgress}%`;
                 }).then((unityInstance) => {
                     ygGameInstance = unityInstance;
+                    SendInitSDKComplete();
+
                     loadingCover.style.background = "";
                     loadingCover.style.display = "none";
+                    FocusGame();
                     // Fill Background [Build Modify]
                 }).catch((message) => {
                     console.error(message);
@@ -224,56 +246,82 @@
 
         function IsLocalHost() {
             try {
-                if (window.top !== window) {
+                if (window.top !== window)
                     return false;
-                }
 
                 const host = window.location.hostname;
-                if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".local")) {
-                    LogStyledMessage("Local Host");
+                const isLocalAddress = window.location.protocol === "file:" ||
+                    host === "localhost" ||
+                    host === "127.0.0.1" ||
+                    host === "::1" ||
+                    host.endsWith(".local");
+
+                if (isLocalAddress && !IsYandexSDKAvailable()) {
+                    LogStyledMessage("Local Host Without Yandex SDK");
                     return true;
                 }
-            } 
+
+                return false;
+            }
             catch (error) {
                 console.error("Error checking the local host:", error);
                 return false;
             }
         }
 
-        function YG2Instance(method) {
-            if (ygGameInstance == null)
+        function IsYandexSDKAvailable() {
+            return typeof YaGames !== "undefined" && typeof YaGames.init === "function";
+        }
+
+        function SendInitSDKComplete() {
+            if (!initYSDK || ygGameInstance == null || initSDKMessageSent)
                 return;
 
-            if (!initGame) {
-                setTimeout(function () {
-                    if (ygGameInstance)
-                        ygGameInstance.SendMessage('YG2Instance', method);
-                }, 100);
-            }
-            else {
-                ygGameInstance.SendMessage('YG2Instance', method);
-            }
-                
+            ygGameInstance.SendMessage('YG2Instance', 'InitSDKComplete');
+            initSDKMessageSent = true;
         }
+
+        let pendingYG2Messages = [];
+        let pendingYG2Timer = null;
+
         function YG2Instance(method, arg) {
             if (ygGameInstance == null)
                 return;
 
-            if (!initGame) {
-                setTimeout(function () {
-                    ygGameInstance.SendMessage('YG2Instance', method, arg);
-                }, 100);
+            if (!initGame || pendingYG2Messages.length > 0) {
+                pendingYG2Messages.push({ method: method, arg: arg });
+
+                if (pendingYG2Timer === null)
+                    pendingYG2Timer = setTimeout(FlushYG2Messages, 100);
+
+                return;
             }
-            else {
-                ygGameInstance.SendMessage('YG2Instance', method, arg);
-            }
+
+            SendYG2Message(method, arg);
         }
 
-        function LogStyledMessage(message, style) {
-            console.log('%c' + message, style);
+        function FlushYG2Messages() {
+            pendingYG2Timer = null;
+
+            const queue = pendingYG2Messages;
+            pendingYG2Messages = [];
+
+            if (ygGameInstance == null)
+                return;
+
+            for (let i = 0; i < queue.length; i++)
+                SendYG2Message(queue[i].method, queue[i].arg);
         }
-        function LogStyledMessage(message) {
-            console.log('%c' + message, 'color: #FFDF73; background-color: #454545');
+
+        function SendYG2Message(method, arg) {
+            if (arg === undefined)
+                ygGameInstance.SendMessage('YG2Instance', method);
+            else
+                ygGameInstance.SendMessage('YG2Instance', method, arg);
+        }
+
+        function LogStyledMessage(message, style = 'color: #FFDF73; background-color: #454545') {
+            console.log('%c' + message, style);
         }
 
         async function InitYSDK() {
@@ -293,8 +341,7 @@
                 // Additional init modules
 
                 initYSDK = true;
-                if (ygGameInstance != null)
-                    ygGameInstance.SendMessage('YG2Instance', 'InitSDKComplete');
+                SendInitSDKComplete();
 
                 LogStyledMessage('Init YandexSDK Success');
 
@@ -312,7 +359,7 @@
             setTimeout(function () {
                 if (isPausedGame == true)
                     YG2Instance('SetPauseGame', 'true');
-            }, 100);
+            }, 0);
 
             // Additional start modules
         }
