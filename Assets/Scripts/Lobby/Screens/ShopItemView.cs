@@ -1,6 +1,7 @@
 using System;
 using Core.Boosts;
 using Galaxy.Data.Infrastructure;
+using Galaxy.Lobby.Screens.Shop;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,6 +12,7 @@ namespace Galaxy.Lobby.Screens
     {
         [Header("Identity")]
         [SerializeField] private BoosterType _type;
+        [SerializeField] private PanelType _panel = PanelType.Boosters;
 
         [Header("Visuals")]
         [SerializeField] private Image _icon;
@@ -26,6 +28,8 @@ namespace Galaxy.Lobby.Screens
         private bool _hasConfig;
 
         public BoosterType Type => _type;
+
+        public PanelType Panel => _panel;
 
         private void OnEnable()
         {

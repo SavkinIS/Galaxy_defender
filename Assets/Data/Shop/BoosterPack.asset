@@ -12,8 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f78bc3b1bbec474e94861bf237e4791, type: 3}
   m_Name: BoosterPack
   m_EditorClassIdentifier: 
-  _productId: StarterPack
+  _productId: BoosterPack
   _repeatable: 0
+  _panel: 0
+  _tier: 0
   _title: Offer
   _description: 
   _icon: {fileID: 0}

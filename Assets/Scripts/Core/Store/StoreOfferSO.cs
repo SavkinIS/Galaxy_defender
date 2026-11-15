@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Galaxy.Data.Infrastructure;
+using Galaxy.Lobby.Screens.Shop;
 using UnityEngine;
 
 namespace Core.Store
@@ -20,6 +21,8 @@ namespace Core.Store
         [SerializeField] private bool _repeatable;
 
         [Header("Presentation")]
+        [SerializeField] private PanelType _panel = PanelType.Packs;
+        [SerializeField] private StoreOfferTier _tier = StoreOfferTier.Basic;
         [SerializeField] private string _title = "Offer";
         [SerializeField, TextArea] private string _description;
         [SerializeField] private Sprite _icon;
@@ -35,13 +38,15 @@ namespace Core.Store
 
         public bool Repeatable => _repeatable;
 
+        public PanelType Panel => _panel;
+
+        public StoreOfferTier Tier => _tier;
+
         public string Title => _title;
 
         public string Description => _description;
 
         public Sprite Icon => _icon;
-
-        public string Badge => _badge;
 
         /// <summary>
         /// Shown until the platform returns a real localized price.

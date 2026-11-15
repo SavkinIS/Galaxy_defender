@@ -134,7 +134,7 @@ namespace Galaxy.Lobby.Presenters
 
                 if (!_store.TryGetOffer(card.ProductId, out var offer))
                 {
-                    card.Bind(null, string.Empty, false, false, OnOfferRequested);
+                    card.Bind(null, string.Empty, false, false, _catalog, OnOfferRequested);
                     continue;
                 }
 
@@ -143,7 +143,7 @@ namespace Galaxy.Lobby.Presenters
                 bool owned = _store.IsOwned(offer);
                 bool canBuy = _store.IsReady && !owned;
 
-                card.Bind(offer, price, owned, canBuy, OnOfferRequested);
+                card.Bind(offer, price, owned, canBuy, _catalog, OnOfferRequested);
             }
         }
 
