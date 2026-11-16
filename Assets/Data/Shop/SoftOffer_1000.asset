@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _productId: soft_1000
   _repeatable: 1
+  _panel: 0
+  _tier: 0
   _title: Offer
   _description: 
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 525ff671aa8d1437b9c593421b0167c2, type: 3}
   _badge: 
   _fallbackPrice: 75
   _softAmount: 1000

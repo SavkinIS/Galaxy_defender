@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BoosterPack
   m_EditorClassIdentifier: 
   _productId: BoosterPack
-  _repeatable: 0
+  _repeatable: 1
   _panel: 0
   _tier: 0
   _title: Offer
