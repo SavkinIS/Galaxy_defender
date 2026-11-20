@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b65027de02a84c43a6e920fa9b626e3, type: 3}
   m_Name: ExtraSlotBooster
   m_EditorClassIdentifier: 
-  _type: 0
   _price: 100
+  _startCount: 3
   _maxCount: 20
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 9234a0088f6ea4e7aa78f2c4724c136c, type: 3}
   _slotsToAdd: 1

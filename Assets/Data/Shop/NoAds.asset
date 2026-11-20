@@ -18,7 +18,7 @@ MonoBehaviour:
   _tier: 0
   _title: Offer
   _description: 
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 08f02a0b598f541e3b85bb0074b985bf, type: 3}
   _badge: 
   _fallbackPrice: 250
   _softAmount: 0

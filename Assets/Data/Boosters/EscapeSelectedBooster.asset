@@ -15,4 +15,4 @@ MonoBehaviour:
   _price: 100
   _startCount: 3
   _maxCount: 50
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 4511e8fc6aacf44c1b7165e20d91184e, type: 3}

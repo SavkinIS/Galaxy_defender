@@ -73,22 +73,37 @@ namespace Galaxy.Lobby.Screens
                 _icon.sprite = offer.Icon;
 
             if (_titleText != null)
-                _titleText.text = offer.Title;
+            {
+                if (_panel == PanelType.Packs)
+                {
+                    _titleText.text = offer.Title;
+                }
+                else
+                {
+                    _titleText.text = offer.SoftAmount.ToString();
+                }
+               
+            }
 
             if (_priceText != null)
                 _priceText.text = owned ? string.Empty : price;
 
             if (_buyButton != null)
                 _buyButton.interactable = canBuy && !owned;
-            
-            _softRewardView.Bind(offer.SoftAmount);
-            _grantNoAdsPanel.gameObject.SetActive(offer.GrantNoAds);
+
+            if (_softRewardView != null)
+                _softRewardView.Bind(offer.SoftAmount);
+
+            if (_grantNoAdsPanel != null)
+                _grantNoAdsPanel.gameObject.SetActive(offer.GrantNoAds);
 
             RefreshBoosterRewards(offer, boosterCatalog);
         }
 
         private void RefreshBoosterRewards(StoreOfferSO offer, BoosterCatalogSO boosterCatalog)
         {
+            HideTemplate();
+
             var rewards = offer.Boosters;
             var rewardIndex = 0;
 
@@ -99,6 +114,7 @@ namespace Galaxy.Lobby.Screens
                     continue;
 
                 var view = GetOrCreateReward(rewardIndex);
+                
                 if (view == null)
                     continue;
 
@@ -123,14 +139,26 @@ namespace Galaxy.Lobby.Screens
             if (_boosterRewardViewPrefab == null)
                 return null;
 
+            var parent = _boosterRewardsHolder != null ? _boosterRewardsHolder : transform;
+
             while (_boosterRewards.Count <= index)
             {
-                var parent = _boosterRewardsHolder != null ? _boosterRewardsHolder : transform;
                 var view = Instantiate(_boosterRewardViewPrefab, parent);
+                view.gameObject.SetActive(true);
                 _boosterRewards.Add(view);
             }
 
             return _boosterRewards[index];
+        }
+
+        private void HideTemplate()
+        {
+            if (_boosterRewardViewPrefab == null)
+                return;
+
+            var template = _boosterRewardViewPrefab.gameObject;
+            if (template.scene.IsValid())
+                template.SetActive(false);
         }
 
         private Sprite GetTierSprite(StoreOfferTier tier)

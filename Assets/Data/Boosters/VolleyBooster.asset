@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e86fdd22a61045e7b83c4e7845575ce, type: 3}
   m_Name: VolleyBooster
   m_EditorClassIdentifier: 
-  _type: 0
   _price: 100
+  _startCount: 3
   _maxCount: 3
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: c418739e7a6a743d89adc6a49d273fc7, type: 3}

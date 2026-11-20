@@ -22,8 +22,6 @@ namespace Galaxy.Lobby.Screens
 
         public SoftCurrencyView SoftCurrencyView => _softCurrencyView;
 
-        public IReadOnlyList<ShopItemView> Items => GetCards(p => p.Items);
-
         public IReadOnlyList<ShopOfferItemView> Offers => GetCards(p => p.Offers);
 
         public PanelType ActivePanel { get; private set; }

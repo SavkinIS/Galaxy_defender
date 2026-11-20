@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _productId: StarterPack
   _repeatable: 0
+  _panel: 0
+  _tier: 0
   _title: Offer
   _description: 
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 5ca66bafbb05c4a1383e9c83fb2d3e14, type: 3}
   _badge: 
   _fallbackPrice: 300
   _softAmount: 5000

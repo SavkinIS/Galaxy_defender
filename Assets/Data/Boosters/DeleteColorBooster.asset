@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60af30646d5c94266945c04709e980a7, type: 3}
   m_Name: DeleteColorBooster
   m_EditorClassIdentifier: 
-  _type: 0
   _price: 100
+  _startCount: 3
   _maxCount: 3
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 597ca4e7f933a4a628030df593962fe4, type: 3}

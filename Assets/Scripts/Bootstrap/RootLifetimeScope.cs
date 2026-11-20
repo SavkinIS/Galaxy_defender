@@ -86,7 +86,9 @@ public class RootLifetimeScope : LifetimeScope
 
         builder.RegisterInstance(catalog);
 
-#if Payments_yg
+#if UNITY_EDITOR
+        builder.Register<EditorStorePlatform>(Lifetime.Singleton).AsSelf().As<IStorePlatform>();
+#elif Payments_yg
         builder.Register<YandexStorePlatform>(Lifetime.Singleton).AsSelf().As<IStorePlatform>();
 #else
         builder.Register<EditorStorePlatform>(Lifetime.Singleton).AsSelf().As<IStorePlatform>();
